@@ -142,7 +142,7 @@ class MainActivity : ComponentActivity() {
         content.addView(diagnostics)
         button(R.string.copy_diagnostics) {
             val text = listOf(
-                "AutoPilot 0.3.1",
+                "AutoPilot 0.3.2",
                 calibrationStatus.text,
                 purchaseStatus.text,
                 diagnostics.text

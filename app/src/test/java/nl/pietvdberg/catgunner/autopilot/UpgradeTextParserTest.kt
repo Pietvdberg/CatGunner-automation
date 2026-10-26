@@ -13,6 +13,21 @@ class UpgradeTextParserTest {
     }
 
     @Test
+    fun acceptsTheObservedPrefixSeparatorWithoutGuessingAnyDigits() {
+        assertEquals(166, UpgradeTextParser.level("Lvo166"))
+        assertEquals(167, UpgradeTextParser.level("Lvo167"))
+        assertEquals(165, UpgradeTextParser.level("LV165"))
+        assertEquals(166, UpgradeTextParser.level("LvO166"))
+    }
+
+    @Test
+    fun ambiguousCharactersInsideTheLevelRemainRejected() {
+        for (value in listOf("LvoI66", "Lvo16O", "Lvo", "Lvo166.5", "Lv.o166", "Lvv166")) {
+            assertNull(value, UpgradeTextParser.level(value))
+        }
+    }
+
+    @Test
     fun ambiguousLevelsAreNotCorrectedOrGuessed() {
         for (value in listOf("184", "Lv.I84", "Lv.184 185", "Lv.-1", "Lv.9999999", "MAX")) {
             assertNull(value, UpgradeTextParser.level(value))

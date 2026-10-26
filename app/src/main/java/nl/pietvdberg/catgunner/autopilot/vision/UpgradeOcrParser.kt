@@ -22,7 +22,8 @@ object UpgradeOcrParser {
             val rawCost = region(95, 174, 1220, 1248)
             val level = UpgradeTextParser.level(rawLevel)
             val cost = UpgradeTextParser.cost(rawCost)
-            details += "${kind.name}: level='${rawLevel.take(32)}', cost='${rawCost.take(32)}'"
+            details += "${kind.name}: level='${rawLevel.take(32)}' parsed=$level, " +
+                "cost='${rawCost.take(32)}'"
             if (level == null) missing += "${kind.name} level"
             if (cost == null) missing += "${kind.name} cost"
             if (level != null && cost != null) {

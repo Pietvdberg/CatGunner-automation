@@ -1,8 +1,12 @@
 package nl.pietvdberg.catgunner.autopilot.vision
 
 object UpgradeTextParser {
-    fun level(text: String): Int? = Regex("^Lv[. ]*([0-9]{1,6})$", RegexOption.IGNORE_CASE)
-        .matchEntire(text.trim())?.groupValues?.get(1)?.toIntOrNull()
+    // The handset reads the period after Lv as "o". Accept it only at that separator;
+    // never replace letters within the numeric value or infer missing digits.
+    private val levelPattern = Regex("^Lv(?:[. ]*|o *)([0-9]{1,6})$", RegexOption.IGNORE_CASE)
+
+    fun level(text: String): Int? = levelPattern.matchEntire(text.trim())
+        ?.groupValues?.get(1)?.toIntOrNull()
 
     /** Preserve suffix spelling; its numeric magnitude has not been established. */
     fun cost(text: String): String? = text.replace(" ", "").takeIf {

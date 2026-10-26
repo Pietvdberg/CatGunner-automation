@@ -1,6 +1,6 @@
 # Known limitations
 
-Version 0.3.1 is a calibrated single-purchase test build, not the autonomous MVP.
+Version 0.3.2 is a calibrated single-purchase test build, not the autonomous MVP.
 The owner confirmed capture startup and notification display on a Pixel 10 running
 Android 16. New calibration, native OCR accuracy, accessibility dispatch and
 post-purchase verification remain untested on the physical phone.
@@ -35,3 +35,9 @@ immediate-failure path and stale-service teardown are corrected in 0.3.1. The
 provided screenshot does not establish why Android disconnected the service or
 whether native OCR is parsing successfully; new diagnostics expose those facts.
 These changes are unit/build validated, not yet validated on the owner's phone.
+
+Owner testing of 0.3.1 confirms that accessibility stays connected and the native
+layout can match at 98%, but raw level prefixes `Lvo166`/`Lvo167` were rejected,
+causing a readiness timeout. 0.3.2 accepts this observed separator variant only;
+it does not correct numeric letters or loosen freshness/currency guards. Successful
+purchase verification on the physical phone is still not established.

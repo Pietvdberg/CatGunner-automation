@@ -1,4 +1,4 @@
-CatGunner AutoPilot 0.3.1 — Pixel 10 development installation
+CatGunner AutoPilot 0.3.2 — Pixel 10 development installation
 
 This archive contains the signed arm64 APK and these instructions.
 The APK is the same file previously provided, not a Play Protect fix.
@@ -12,8 +12,8 @@ The APK is the same file previously provided, not a Play Protect fix.
    Windows PowerShell: .\adb.exe devices
    macOS/Linux: ./adb devices
 6. Install the extracted APK using its actual path:
-   Windows PowerShell: .\adb.exe install -r "C:\path\to\AutoPilot-Pixel10-0.3.1.apk"
-   macOS/Linux: ./adb install -r "/path/to/AutoPilot-Pixel10-0.3.1.apk"
+   Windows PowerShell: .\adb.exe install -r "C:\path\to\AutoPilot-Pixel10-0.3.2.apk"
+   macOS/Linux: ./adb install -r "/path/to/AutoPilot-Pixel10-0.3.2.apk"
 7. Keep Play Protect enabled. If installation is still blocked, report the actual
    installer/ADB error; do not alter the APK to disguise its capabilities.
 8. Disable USB debugging after installation if it is no longer needed.
@@ -24,7 +24,11 @@ needed during normal app use. This is a single-purchase test build; physical OCR
 and purchase verification still require testing. Only green banknotes are allowed.
 Gems, unknown currency and real-money purchases are forbidden.
 
-Version 0.3.1: calibration is retained. Check that accessibility says Connected.
+Version 0.3.2: calibration is retained. Check that accessibility says Connected.
 If it says Enabled but disconnected, toggle AutoPilot off and back on in Android
 accessibility settings. Run one new test. If it fails, press Copy test diagnostics
 and paste the text into the chat. No diagnostics are uploaded automatically.
+
+0.3.2 accepts the observed Lvo166/Lvo167 fixed-prefix OCR separator without
+substituting any numeric digits. Existing calibration is retained. Timeout
+details now include the last blocking stage. Copy diagnostics if a test fails.

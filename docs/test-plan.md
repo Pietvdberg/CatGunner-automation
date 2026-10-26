@@ -84,3 +84,13 @@ or the bundled native OCR model on a phone.
 - If failure persists, use Copy test diagnostics and inspect the exact last game
   detector reason, foreground status, OCR field strings/task error, and accessibility
   connection event. No need to guess values from an empty historical reading.
+
+## 0.3.2 OCR prefix regression
+
+Owner diagnostics: connected accessibility; last game label match 98% for all
+three controls; raw `Lvo166` / `8h`, `Lvo167` / `11h`, `LV165` / `5.79h`. Historical
+readings sometimes parsed, but repeated fixed-prefix failures prevented two
+consecutive complete readings. Unit tests replay these exact strings through
+region extraction and the engine: one frame cannot dispatch; two distinct fresh
+frames can make one request. Numeric ambiguity such as `LvoI66` or `Lvo16O` stays
+rejected. On the phone verify both raw and parsed levels before confirming success.

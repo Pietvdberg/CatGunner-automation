@@ -281,6 +281,15 @@ class SinglePurchaseEngineTest {
         assertEquals(PurchasePhase.FAILED, engine.report.value.phase)
     }
 
+    @Test
+    fun timeoutKeepsTheLastReadinessReason() {
+        arm()
+        engine.waitForEvidence("OCR missing POWER level")
+        now += 30_001
+        engine.tick()
+        assertTrue(engine.report.value.detail.contains("OCR missing POWER level"))
+    }
+
     private fun arm() {
         assertTrue(engine.arm(UpgradeKind.POWER, profile, lease))
     }

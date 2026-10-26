@@ -92,7 +92,11 @@ class SinglePurchaseEngine(private val clock: () -> Long) {
     @Synchronized
     fun tick() {
         if (active() && clock() > deadline) {
-            finish(PurchasePhase.FAILED, "Request timed out. No automatic retry.")
+            val lastStage = report.value.detail.take(400)
+            finish(
+                PurchasePhase.FAILED,
+                "Request timed out. No automatic retry. Last stage: $lastStage"
+            )
         }
     }
 

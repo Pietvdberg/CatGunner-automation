@@ -1,6 +1,6 @@
 <resources>
     <string name="app_name">CatGunner AutoPilot</string>
-    <string name="intro">AutoPilot 0.3.1 — Single-purchase test build\n1. Enable the AutoPilot accessibility service.\n2. Start capture, open the game and wait for its upgrade bar.\n3. Return here and calibrate the three green-banknote controls.\n4. Resume capture, then choose ONE purchase test.\nAutomatic buying and Rebirth Rush are not enabled.</string>
+    <string name="intro">AutoPilot 0.3.2 — Single-purchase test build\n1. Enable the AutoPilot accessibility service.\n2. Start capture, open the game and wait for its upgrade bar.\n3. Return here and calibrate the three green-banknote controls.\n4. Resume capture, then choose ONE purchase test.\nAutomatic buying and Rebirth Rush are not enabled.</string>
     <string name="start">Start screen capture</string>
     <string name="pause">Pause</string>
     <string name="resume">Resume</string>

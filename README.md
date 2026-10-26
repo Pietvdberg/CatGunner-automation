@@ -1,17 +1,17 @@
 # CatGunner AutoPilot
 
 Private, on-device Android assistant for Idle Cat Gunner (`com.Chodun.CatGunner`).
-Version 0.3.1 implements calibration and an explicitly armed **single-purchase
+Version 0.3.2 implements calibration and an explicitly armed **single-purchase
 test**. Adaptive buying and Rebirth Rush remain future milestones. Green banknotes
 are the only permitted currency; gems, unknown currencies and real money are forbidden.
 
 ## Download on your phone or computer
 
-- **[Download Pixel 10 APK (16.8 MB)](https://github.com/Pietvdberg/CatGunner-automation/raw/refs/tags/v0.3.1/downloads/AutoPilot-Pixel10-0.3.1.apk)**
-- **[Download ZIP with APK and USB-install instructions (9.4 MB)](https://github.com/Pietvdberg/CatGunner-automation/raw/refs/tags/v0.3.1/downloads/AutoPilot-Pixel10-download.zip)**
+- **[Download Pixel 10 APK (16.8 MB)](https://github.com/Pietvdberg/CatGunner-automation/raw/refs/tags/v0.3.2/downloads/AutoPilot-Pixel10-0.3.2.apk)**
+- **[Download ZIP with APK and USB-install instructions (9.4 MB)](https://github.com/Pietvdberg/CatGunner-automation/raw/refs/tags/v0.3.2/downloads/AutoPilot-Pixel10-download.zip)**
 - [View installation instructions](downloads/INSTALL.txt) and [SHA-256 checksums](downloads/SHA256SUMS).
 
-These are signed 0.3.1 builds. Hosting on GitHub fixes
+These are signed 0.3.2 builds. Hosting on GitHub fixes
 file access; it does not remove Play Protect's installation block. A work computer
 can download the files without installing software. USB/ADB installation requires
 a computer on which you are allowed to run Android Platform-Tools.
@@ -107,3 +107,12 @@ The app also retains the last game detector scores, exact level/cost OCR fields
 and task error codes. **Copy test diagnostics** places this local text on your
 clipboard only when pressed; paste it into the chat if a new test fails. No image
 or diagnostic text is uploaded automatically.
+
+## 0.3.2 observed OCR prefix fix
+
+The phone reported `Lvo166` and `Lvo167` in the exact level ROI. The recognizer
+can render the period after `Lv` as `o`. This fixed-prefix separator is now accepted
+while all numeric digits remain strict. Letters inside the number, missing digits,
+fractional levels and unrelated labels remain invalid. Two fresh stable readings
+and the existing currency/layout/gesture guards are still required. Timeouts now
+retain their last readiness reason rather than only reporting a generic expiry.

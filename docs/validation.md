@@ -93,3 +93,15 @@ diagnostics. Phone revalidation remains outstanding; no successful real purchase
 or native OCR accuracy is claimed by these cloud tests.
 
 APK SHA-256: `e03d40afb8c961fb4e6f668574e8438e2bd21b40cdbf60ce14e29d8ca72a2608`.
+
+## 0.3.2 observed level-prefix regression
+
+Ran `tools/cloud-gradle.sh -PsplitApks assembleDebug testDebugUnitTest lintDebug
+ktlintCheck` successfully. 77 tests executed, zero failures/errors/skips.
+New regression cases use the owner's exact `Lvo166`/`8h`, `Lvo167`/`11h`,
+`LV165`/`5.79h` transcript and native 1080×2424 profile through OCR extraction
+and two stable engine readings. The fixed-prefix separator now parses; numeric
+ambiguity remains rejected. Timeout tests confirm the last blocking reason is
+retained. Actual phone purchase success is still not claimed.
+
+APK SHA-256: `dc29887718e85b8569c8a61ab7c093922b41ddef77871d480ad55618c31a95c3`.
