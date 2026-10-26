@@ -1,0 +1,34 @@
+{
+  "version": 1,
+  "sourceDimensions": [
+    570,
+    1280
+  ],
+  "fixtureCrop": [
+    0,
+    1130,
+    570,
+    1280
+  ],
+  "format": "RGB8 row-major, 570 by 150 pixels",
+  "sources": [
+    {
+      "name": "1-135594.jpg",
+      "sha256": "8bdb5393ab8514fadfca47225ce64366fe9f38ed70bbd5a962835ed9c596db1a",
+      "expected": [
+        "AVAILABLE",
+        "AVAILABLE",
+        "AVAILABLE"
+      ]
+    },
+    {
+      "name": "2-135595.jpg",
+      "sha256": "e54ca88b32f11299e536ca2635f26056814043f382f7313451b929f15b0089c0",
+      "expected": [
+        "UNAVAILABLE",
+        "AVAILABLE",
+        "AVAILABLE"
+      ]
+    }
+  ]
+}
