@@ -9,7 +9,17 @@ import nl.pietvdberg.catgunner.autopilot.domain.state.ActionLease
 import nl.pietvdberg.catgunner.autopilot.vision.UpgradeKind
 import nl.pietvdberg.catgunner.autopilot.vision.UpgradeTextParser
 
-enum class PurchasePhase { IDLE, ARMED, DISPATCHED, VERIFYING, VERIFIED, FAILED, CANCELLED }
+enum class PurchasePhase {
+    IDLE,
+    ARMED,
+    DISPATCHED,
+    VERIFYING,
+    VERIFIED,
+    FAILED,
+    CANCELLED,
+    UNCONFIRMED,
+    REVIEWED
+}
 
 data class UpgradeReading(val level: Int, val cost: String, val available: Boolean)
 
@@ -30,7 +40,9 @@ data class PurchaseReport(
     val detail: String = "No purchase test armed.",
     val before: UpgradeReading? = null,
     val after: UpgradeReading? = null,
-    val calibration: CalibrationProfile? = null
+    val calibration: CalibrationProfile? = null,
+    val gestureDispatched: Boolean = false,
+    val verificationSamples: Int = 0
 )
 
 /** A one-use request. No retries, automatic rearming, batch taps, or callback-only success. */
@@ -48,7 +60,12 @@ class SinglePurchaseEngine(private val clock: () -> Long) {
 
     @Synchronized
     fun arm(kind: UpgradeKind, calibration: CalibrationProfile, actionLease: ActionLease): Boolean {
-        if (active() || !calibration.isValid()) return false
+        if (active() ||
+            report.value.phase == PurchasePhase.UNCONFIRMED ||
+            !calibration.isValid()
+        ) {
+            return false
+        }
         profile = calibration.copy(targets = calibration.targets.toMap())
         lease = actionLease
         previous = null
@@ -77,16 +94,66 @@ class SinglePurchaseEngine(private val clock: () -> Long) {
         if (active()) finish(PurchasePhase.FAILED, reason)
     }
 
-    /** Suspend before the first gesture until two new valid readings or the original deadline. */
+    /** Unknown observations cannot schedule a gesture or extend any deadline. */
     @Synchronized
     fun waitForEvidence(reason: String) {
         tick()
-        if (report.value.phase == PurchasePhase.ARMED) {
-            previous = null
-            mutableReport.value = report.value.copy(detail = "Waiting, no tap attempted: $reason")
-        } else {
-            unsafe(reason)
+        when {
+            report.value.phase == PurchasePhase.ARMED -> {
+                previous = null
+                mutableReport.value =
+                    report.value.copy(detail = "Waiting, no tap attempted: $reason")
+            }
+            active() && report.value.gestureDispatched -> {
+                confirmations = 0
+                mutableReport.value = report.value.copy(
+                    verificationSamples = 0,
+                    detail = "Tap sent; checking its outcome without another tap: $reason"
+                )
+            }
+            else -> unsafe(reason)
         }
+    }
+
+    @Synchronized
+    fun maximumReadingAgeMillis(): Long =
+        if (report.value.phase == PurchasePhase.VERIFYING) 2000 else 750
+
+    /** Must wrap the actual framework call, not the job that queues it. */
+    @Synchronized
+    fun executeGesture(id: String, send: () -> Boolean): Boolean {
+        tick()
+        if (id != report.value.id ||
+            report.value.phase != PurchasePhase.DISPATCHED ||
+            report.value.gestureDispatched
+        ) {
+            return false
+        }
+        mutableReport.value = report.value.copy(
+            gestureDispatched = true,
+            detail = "One tap sent; purchase not yet verified."
+        )
+        return try {
+            val accepted = send()
+            if (!accepted) {
+                mutableReport.value = report.value.copy(gestureDispatched = false)
+                unsafe("Android refused the gesture. No tap accepted and no retry.")
+            }
+            accepted
+        } catch (error: RuntimeException) {
+            unsafe("Gesture call interrupted; inspect the game before another test.")
+            false
+        }
+    }
+
+    @Synchronized
+    fun acknowledgeUnconfirmed(): Boolean {
+        if (report.value.phase != PurchasePhase.UNCONFIRMED) return false
+        mutableReport.value = report.value.copy(
+            phase = PurchasePhase.REVIEWED,
+            detail = "Game reviewed by user. Automatic purchase verification remains unconfirmed."
+        )
+        return true
     }
 
     @Synchronized
@@ -110,7 +177,7 @@ class SinglePurchaseEngine(private val clock: () -> Long) {
         if (!active()) return
         val calibration = profile ?: return
         val kind = current.kind ?: return
-        if (clock() - reading.capturedAt !in 0..750 ||
+        if (clock() - reading.capturedAt !in 0..maximumReadingAgeMillis() ||
             !reading.foregroundVerified ||
             !calibration.matches(reading.width, reading.height, reading.gameVersion) ||
             reading.upgrades.keys != UpgradeKind.entries.toSet() ||
@@ -167,9 +234,10 @@ class SinglePurchaseEngine(private val clock: () -> Long) {
             return
         }
         completedAt = clock()
-        deadline = completedAt + 5000
+        deadline = completedAt + 8000
         mutableReport.value = report.value.copy(
             phase = PurchasePhase.VERIFYING,
+            gestureDispatched = true,
             detail = "Gesture finished. Waiting for two matching level-change observations."
         )
     }
@@ -192,9 +260,20 @@ class SinglePurchaseEngine(private val clock: () -> Long) {
         }
         if (next.level == old.level) {
             confirmations = 0
+            mutableReport.value = report.value.copy(after = next, verificationSamples = 0)
             return
         }
-        confirmations++
+        val candidate = report.value.after
+        confirmations = if (candidate?.level == next.level && candidate.cost == next.cost) {
+            confirmations + 1
+        } else {
+            1
+        }
+        mutableReport.value = report.value.copy(
+            after = next,
+            verificationSamples = confirmations,
+            detail = "Tap sent; level ${old.level} → ${next.level} observed $confirmations/2."
+        )
         if (confirmations >= 2) {
             mutableReport.value = report.value.copy(after = next)
             finish(PurchasePhase.VERIFIED, "One level increase verified twice. Test complete.")
@@ -208,7 +287,16 @@ class SinglePurchaseEngine(private val clock: () -> Long) {
     )
 
     private fun finish(phase: PurchasePhase, detail: String) {
-        mutableReport.value = report.value.copy(phase = phase, detail = detail)
+        val unconfirmed = report.value.gestureDispatched &&
+            phase in setOf(PurchasePhase.FAILED, PurchasePhase.CANCELLED)
+        mutableReport.value = report.value.copy(
+            phase = if (unconfirmed) PurchasePhase.UNCONFIRMED else phase,
+            detail = if (unconfirmed) {
+                "Tap sent; purchase outcome UNCONFIRMED. Inspect the game; no retry. $detail"
+            } else {
+                detail
+            }
+        )
         previous = null
     }
 }

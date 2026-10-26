@@ -19,7 +19,9 @@ class PurchaseJournal(context: Context) {
         }
         if ((0 until previous.length()).any {
                 val event = previous.getJSONObject(it)
-                event.optString("id") == report.id && event.optString("phase") == report.phase.name
+                event.optString("id") == report.id &&
+                    event.optString("phase") == report.phase.name &&
+                    event.optBoolean("gestureDispatched") == report.gestureDispatched
             }
         ) {
             return@synchronized
@@ -31,6 +33,8 @@ class PurchaseJournal(context: Context) {
         val point = report.kind?.let { report.calibration?.targets?.get(it) }
         retained.put(
             JSONObject().put("id", report.id).put("phase", report.phase.name)
+                .put("gestureDispatched", report.gestureDispatched)
+                .put("verificationSamples", report.verificationSamples)
                 .put("upgrade", report.kind?.name).put("detail", report.detail)
                 .put("beforeLevel", report.before?.level).put("beforeCost", report.before?.cost)
                 .put("afterLevel", report.after?.level).put("afterCost", report.after?.cost)

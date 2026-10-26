@@ -1,6 +1,6 @@
 # Known limitations
 
-Version 0.3.2 is a calibrated single-purchase test build, not the autonomous MVP.
+Version 0.3.3 is a calibrated single-purchase test build, not the autonomous MVP.
 The owner confirmed capture startup and notification display on a Pixel 10 running
 Android 16. New calibration, native OCR accuracy, accessibility dispatch and
 post-purchase verification remain untested on the physical phone.
@@ -41,3 +41,11 @@ layout can match at 98%, but raw level prefixes `Lvo166`/`Lvo167` were rejected,
 causing a readiness timeout. 0.3.2 accepts this observed separator variant only;
 it does not correct numeric letters or loosen freshness/currency guards. Successful
 purchase verification on the physical phone is still not established.
+
+Owner testing of 0.3.2 confirms visible upgrade effects, with later native OCR
+showing Power 168 and 169, despite app FAILED reports from temporary label/OCR
+loss. Actual gesture delivery works on the phone. The 0.3.3 verification changes
+are covered by regression tests but have not yet been phone-validated. Numeric
+strings such as `Lva68` remain ambiguous and are discarded. UNCONFIRMED means a
+purchase may already have occurred; reviewing the game does not establish
+automatic verification. New tests are blocked pending explicit review in-process.

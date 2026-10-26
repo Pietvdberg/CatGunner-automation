@@ -54,6 +54,7 @@ class MainActivity : ComponentActivity() {
     private lateinit var retained: TextView
     private lateinit var purchaseStatus: TextView
     private lateinit var calibrationStatus: TextView
+    private lateinit var reviewOutcome: Button
     private lateinit var diagnostics: TextView
     private val purchaseButtons = mutableMapOf<UpgradeKind, Button>()
     private lateinit var start: Button
@@ -142,7 +143,7 @@ class MainActivity : ComponentActivity() {
         content.addView(diagnostics)
         button(R.string.copy_diagnostics) {
             val text = listOf(
-                "AutoPilot 0.3.2",
+                "AutoPilot 0.3.3",
                 calibrationStatus.text,
                 purchaseStatus.text,
                 diagnostics.text
@@ -154,6 +155,9 @@ class MainActivity : ComponentActivity() {
         }
         purchaseStatus = TextView(this).apply { textSize = 16f }
         content.addView(purchaseStatus)
+        reviewOutcome = button(R.string.review_outcome) {
+            PurchaseRuntime.engine.acknowledgeUnconfirmed()
+        }
         UpgradeKind.entries.forEach { kind ->
             val label = when (kind) {
                 UpgradeKind.POWER -> R.string.test_power
@@ -339,8 +343,17 @@ class MainActivity : ComponentActivity() {
             R.string.purchase_status,
             report.phase.name,
             report.detail,
-            readings
+            readings,
+            getString(if (report.gestureDispatched) R.string.tap_possible else R.string.tap_none),
+            report.before?.level?.toString() ?: "—",
+            report.after?.level?.toString() ?: "—",
+            report.verificationSamples
         )
+        reviewOutcome.visibility = if (report.phase == PurchasePhase.UNCONFIRMED) {
+            View.VISIBLE
+        } else {
+            View.GONE
+        }
         val active =
             report.phase in
                 setOf(PurchasePhase.ARMED, PurchasePhase.DISPATCHED, PurchasePhase.VERIFYING)
@@ -348,6 +361,7 @@ class MainActivity : ComponentActivity() {
             it.isEnabled = calibrated &&
                 accessibility &&
                 !active &&
+                report.phase != PurchasePhase.UNCONFIRMED &&
                 state.mode == SessionMode.OBSERVING &&
                 state.captureActive
         }

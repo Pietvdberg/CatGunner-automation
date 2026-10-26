@@ -55,7 +55,7 @@ class PurchasePipeline(private val context: Context) : AutoCloseable {
         val requestId = engine.report.value.id
         LiveDiagnostics.live(evidence)
         if (!foreground) {
-            engine.waitForEvidence("Foreground check: ${foregroundStatus.name}")
+            foregroundLost("Foreground check: ${foregroundStatus.name}")
             return
         }
         LiveDiagnostics.game(evidence)
@@ -83,14 +83,14 @@ class PurchasePipeline(private val context: Context) : AutoCloseable {
                 return@sample
             }
             if (GameAccessibilityService.instance?.isGameForeground() != true) {
-                engine.waitForEvidence("Game changed while reading values.")
+                foregroundLost("Game changed while reading values.")
                 return@sample
             }
             if (upgrades == null) {
                 engine.waitForEvidence("OCR is not ready: ${result.detail}")
                 return@sample
             }
-            if (SystemClock.elapsedRealtime() - capturedAt > 750) {
+            if (SystemClock.elapsedRealtime() - capturedAt > engine.maximumReadingAgeMillis()) {
                 engine.waitForEvidence("OCR frame is stale; waiting for a fresh reading.")
                 return@sample
             }
@@ -139,16 +139,26 @@ class PurchasePipeline(private val context: Context) : AutoCloseable {
                         ) {
                             false
                         } else {
-                            GameAccessibilityService.instance?.tapOnce(
-                                point.x * nativeWidth,
-                                point.y * nativeHeight
-                            ) { succeeded -> engine.gestureCompleted(id, succeeded) } == true
+                            engine.executeGesture(id) {
+                                GameAccessibilityService.instance?.tapOnce(
+                                    point.x * nativeWidth,
+                                    point.y * nativeHeight
+                                ) { succeeded -> engine.gestureCompleted(id, succeeded) } == true
+                            }
                         }
                     }
                     if (!accepted) engine.gestureCompleted(id, false)
                 }
                 true
             }
+        }
+    }
+
+    private fun foregroundLost(reason: String) {
+        if (engine.report.value.phase == PurchasePhase.ARMED) {
+            engine.waitForEvidence(reason)
+        } else {
+            engine.unsafe(reason)
         }
     }
 

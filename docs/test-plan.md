@@ -94,3 +94,19 @@ consecutive complete readings. Unit tests replay these exact strings through
 region extraction and the engine: one frame cannot dispatch; two distinct fresh
 frames can make one request. Numeric ambiguity such as `LvoI66` or `Lvo16O` stays
 rejected. On the phone verify both raw and parsed levels before confirming success.
+
+## 0.3.3 post-purchase regression
+
+- Replay bad `Lva68` OCR and Power-only 49% label-match interruptions after one
+  accepted gesture. Neither may schedule another tap; later two valid matching
+  post-completion readings can verify within the original eight-second budget.
+- An 866 ms post-action OCR processing delay may be used for verification only.
+  The 750 ms action gate and actual-capture freshness checks remain unchanged.
+- Callback-only, repeated frame, a pre-callback captured frame, or a single valid
+  post-read can never report VERIFIED.
+- Timeout, pause, foreground loss, cancelled callback or a framework exception
+  after possible dispatch yields UNCONFIRMED. A clear refusal before any actual
+  send can remain FAILED. No report implying no tap may follow a known sent tap.
+- UNCONFIRMED blocks new tests until game review. Review itself never taps or marks
+  the old purchase VERIFIED. After a real test keep the game visible about ten
+  seconds before returning to AutoPilot so verification can finish.

@@ -20,9 +20,11 @@ class SinglePurchaseEngineTest {
     )
     private var dispatches = 0
     private val lease = ActionLease(1, 0)
-    private val dispatch: (String, ActionLease, NormalizedPoint) -> Boolean = { _, _, _ ->
-        dispatches++
-        true
+    private val dispatch: (String, ActionLease, NormalizedPoint) -> Boolean = { id, _, _ ->
+        engine.executeGesture(id) {
+            dispatches++
+            true
+        }
     }
 
     @Test
@@ -56,9 +58,9 @@ class SinglePurchaseEngineTest {
         dispatchOnce()
         engine.gestureCompleted(engine.report.value.id, true)
         feed()
-        now += 5001
+        now += 8001
         engine.tick()
-        assertEquals(PurchasePhase.FAILED, engine.report.value.phase)
+        assertEquals(PurchasePhase.UNCONFIRMED, engine.report.value.phase)
         repeat(5) { feed() }
         assertEquals(1, dispatches)
     }
@@ -68,7 +70,7 @@ class SinglePurchaseEngineTest {
         dispatchOnce()
         now += 2001
         engine.tick()
-        assertEquals(PurchasePhase.FAILED, engine.report.value.phase)
+        assertEquals(PurchasePhase.UNCONFIRMED, engine.report.value.phase)
     }
 
     @Test
@@ -162,7 +164,7 @@ class SinglePurchaseEngineTest {
         val values = reading(level = 11).upgrades.toMutableMap()
         values[UpgradeKind.MONEY] = values.getValue(UpgradeKind.MONEY).copy(level = 500)
         engine.onReading(reading(level = 11).copy(upgrades = values), dispatch)
-        assertEquals(PurchasePhase.FAILED, engine.report.value.phase)
+        assertEquals(PurchasePhase.UNCONFIRMED, engine.report.value.phase)
     }
 
     @Test
@@ -170,7 +172,7 @@ class SinglePurchaseEngineTest {
         dispatchOnce()
         engine.gestureCompleted(engine.report.value.id, true)
         feed(level = 12)
-        assertEquals(PurchasePhase.FAILED, engine.report.value.phase)
+        assertEquals(PurchasePhase.UNCONFIRMED, engine.report.value.phase)
     }
 
     @Test
@@ -213,7 +215,7 @@ class SinglePurchaseEngineTest {
         dispatchOnce()
         now += 2001
         engine.gestureCompleted(engine.report.value.id, true)
-        assertEquals(PurchasePhase.FAILED, engine.report.value.phase)
+        assertEquals(PurchasePhase.UNCONFIRMED, engine.report.value.phase)
     }
 
     @Test
@@ -261,10 +263,10 @@ class SinglePurchaseEngineTest {
     }
 
     @Test
-    fun unknownEvidenceAfterDispatchFailsInsteadOfWaitingOrRetrying() {
+    fun unknownEvidenceAfterSentTapWaitsWithoutSendingAnotherGesture() {
         dispatchOnce()
         engine.waitForEvidence("Obscured control")
-        assertEquals(PurchasePhase.FAILED, engine.report.value.phase)
+        assertEquals(PurchasePhase.DISPATCHED, engine.report.value.phase)
         feed()
         assertEquals(1, dispatches)
     }
@@ -288,6 +290,162 @@ class SinglePurchaseEngineTest {
         now += 30_001
         engine.tick()
         assertTrue(engine.report.value.detail.contains("OCR missing POWER level"))
+    }
+
+    @Test
+    fun badOcrAndLabelAnimationCanRecoverWithinBoundedVerificationWithoutAnotherTap() {
+        dispatchOnce()
+        engine.gestureCompleted(engine.report.value.id, true)
+        engine.waitForEvidence("OCR level Lva68 is ambiguous")
+        assertEquals(PurchasePhase.VERIFYING, engine.report.value.phase)
+        feed(level = 11)
+        engine.waitForEvidence("POWER label mismatch 49%")
+        feed(level = 11)
+        assertEquals(PurchasePhase.VERIFYING, engine.report.value.phase)
+        feed(level = 11)
+        assertEquals(PurchasePhase.VERIFIED, engine.report.value.phase)
+        assertEquals(1, dispatches)
+    }
+
+    @Test
+    fun observed866MillisecondOcrDelayCanVerifyButCannotAuthorizeAnotherTap() {
+        dispatchOnce()
+        engine.gestureCompleted(engine.report.value.id, true)
+        val captured = now + 100
+        now = captured + 866
+        engine.onReading(reading(level = 11).copy(capturedAt = captured), dispatch)
+        val secondCapture = now + 100
+        now = secondCapture + 866
+        engine.onReading(reading(level = 11).copy(capturedAt = secondCapture), dispatch)
+        assertEquals(PurchasePhase.VERIFIED, engine.report.value.phase)
+        assertEquals(1, dispatches)
+        assertEquals(750L, engine.maximumReadingAgeMillis())
+    }
+
+    @Test
+    fun uncertaintyDoesNotExtendTheEightSecondVerificationDeadline() {
+        dispatchOnce()
+        engine.gestureCompleted(engine.report.value.id, true)
+        repeat(9) {
+            now += 1000
+            engine.waitForEvidence("Unreadable frame")
+        }
+        assertEquals(PurchasePhase.UNCONFIRMED, engine.report.value.phase)
+        feed(level = 11)
+        feed(level = 11)
+        assertEquals(PurchasePhase.UNCONFIRMED, engine.report.value.phase)
+        assertEquals(1, dispatches)
+    }
+
+    @Test
+    fun anUnconfirmedTapRequiresReviewBeforeAnyNewTestCanArm() {
+        dispatchOnce()
+        engine.unsafe("Game left foreground")
+        assertEquals(PurchasePhase.UNCONFIRMED, engine.report.value.phase)
+        assertTrue(engine.report.value.gestureDispatched)
+        assertFalse(engine.arm(UpgradeKind.POWER, profile, lease))
+        assertTrue(engine.acknowledgeUnconfirmed())
+        assertEquals(PurchasePhase.REVIEWED, engine.report.value.phase)
+        assertEquals(1, dispatches)
+        assertTrue(engine.arm(UpgradeKind.POWER, profile, lease))
+        assertEquals(1, dispatches)
+    }
+
+    @Test
+    fun cancellationAfterAnAcceptedTapIsNotReportedAsNoPurchase() {
+        dispatchOnce()
+        engine.cancel("Paused")
+        assertEquals(PurchasePhase.UNCONFIRMED, engine.report.value.phase)
+        assertTrue(engine.report.value.gestureDispatched)
+        assertEquals(1, dispatches)
+    }
+
+    @Test
+    fun queuedButNotSentRequestsCanBeCancelledWithoutClaimingATap() {
+        arm()
+        feed()
+        now += 250
+        engine.onReading(reading()) { _, _, _ -> true }
+        engine.cancel("Paused before actual send")
+        assertEquals(PurchasePhase.CANCELLED, engine.report.value.phase)
+        assertFalse(engine.report.value.gestureDispatched)
+        assertFalse(
+            engine.executeGesture(engine.report.value.id) {
+                dispatches++
+                true
+            }
+        )
+        assertEquals(0, dispatches)
+    }
+
+    @Test
+    fun frameworkRefusalAndFrameworkExceptionHaveDifferentOutcomes() {
+        arm()
+        feed()
+        now += 250
+        engine.onReading(reading()) { id, _, _ -> engine.executeGesture(id) { false } }
+        assertEquals(PurchasePhase.FAILED, engine.report.value.phase)
+        assertFalse(engine.report.value.gestureDispatched)
+        arm()
+        feed()
+        now += 250
+        engine.onReading(reading()) { id, _, _ ->
+            engine.executeGesture(id) { throw IllegalStateException("Binder failed") }
+        }
+        assertEquals(PurchasePhase.UNCONFIRMED, engine.report.value.phase)
+        assertTrue(engine.report.value.gestureDispatched)
+    }
+
+    @Test
+    fun onlyOneActualFrameworkCallCanExecuteForARequest() {
+        dispatchOnce()
+        assertFalse(
+            engine.executeGesture(engine.report.value.id) {
+                dispatches++
+                true
+            }
+        )
+        assertEquals(1, dispatches)
+    }
+
+    @Test
+    fun onePostObservationIsRetainedButNeverMarkedVerified() {
+        dispatchOnce()
+        engine.gestureCompleted(engine.report.value.id, true)
+        feed(level = 11)
+        assertEquals(11, engine.report.value.after?.level)
+        assertEquals(1, engine.report.value.verificationSamples)
+        assertEquals(PurchasePhase.VERIFYING, engine.report.value.phase)
+    }
+
+    @Test
+    fun uncertaintyWhileOnlyQueuedStillRefusesTheActualTap() {
+        arm()
+        feed()
+        now += 250
+        engine.onReading(reading()) { _, _, _ -> true }
+        engine.waitForEvidence("POWER obscured before send")
+        assertEquals(PurchasePhase.FAILED, engine.report.value.phase)
+        assertFalse(
+            engine.executeGesture(engine.report.value.id) {
+                dispatches++
+                true
+            }
+        )
+        assertEquals(0, dispatches)
+    }
+
+    @Test
+    fun preCallbackFrameCannotVerifyEvenWhenItsOcrFinishesLater() {
+        dispatchOnce()
+        val beforeCompletion = now
+        now += 50
+        engine.gestureCompleted(engine.report.value.id, true)
+        now += 866
+        engine.onReading(reading(level = 11).copy(capturedAt = beforeCompletion), dispatch)
+        assertEquals(0, engine.report.value.verificationSamples)
+        assertEquals(PurchasePhase.VERIFYING, engine.report.value.phase)
+        assertEquals(1, dispatches)
     }
 
     private fun arm() {

@@ -1,6 +1,6 @@
 <resources>
     <string name="app_name">CatGunner AutoPilot</string>
-    <string name="intro">AutoPilot 0.3.2 — Single-purchase test build\n1. Enable the AutoPilot accessibility service.\n2. Start capture, open the game and wait for its upgrade bar.\n3. Return here and calibrate the three green-banknote controls.\n4. Resume capture, then choose ONE purchase test.\nAutomatic buying and Rebirth Rush are not enabled.</string>
+    <string name="intro">AutoPilot 0.3.3 — Single-purchase test build\n1. Enable the AutoPilot accessibility service.\n2. Start capture, open the game and wait for its upgrade bar.\n3. Return here and calibrate the three green-banknote controls.\n4. Resume capture, then choose ONE purchase test.\nAutomatic buying and Rebirth Rush are not enabled.</string>
     <string name="start">Start screen capture</string>
     <string name="pause">Pause</string>
     <string name="resume">Resume</string>
@@ -50,7 +50,7 @@
     <string name="calibration_status">Saved calibration: %1$s\nAccessibility service: %2$s</string>
     <string name="preview_waiting">No recognized game frame yet. Enable accessibility, start capture, open the game, then return here.</string>
     <string name="preview_retained">Retained game result · age (s): %1$d · %2$d × %3$d\n%4$s\nThis snapshot is for inspection, never a live purchase precondition.</string>
-    <string name="purchase_status">Test: %1$s\n%2$s\nLast OCR reading (historical):\n%3$s</string>
+    <string name="purchase_status">Test: %1$s\n%2$s\nTap sent or possibly sent: %4$s · before level: %5$s · last observed: %6$s · verified samples: %7$d/2\nLast OCR reading (historical):\n%3$s</string>
     <string name="ocr_waiting">No complete level/cost reading yet.</string>
     <string name="test_power">Test ONE Power purchase</string>
     <string name="test_speed">Test ONE Speed purchase</string>
@@ -63,4 +63,7 @@
     <string name="copy_diagnostics">Copy test diagnostics</string>
     <string name="diagnostics_copied">Diagnostics copied. Paste them into the chat if the test fails.</string>
     <string name="diagnostics_text">Live detection: %1$s\nLast game detection: %2$s\nLast OCR attempt: %3$s\nAccessibility event: %4$s\nForeground check: %5$s</string>
+    <string name="review_outcome">I checked the game — allow a NEW purchase test</string>
+    <string name="tap_possible">Yes</string>
+    <string name="tap_none">No</string>
 </resources>

@@ -52,3 +52,23 @@ from superseded accessibility instances so an old callback cannot erase a new
 connection. Android's enabled setting and actual connection are shown separately.
 `LiveDiagnostics` retains bounded local text about the latest verified game frame
 and OCR fields. Clipboard export is explicitly user initiated.
+
+## 0.3.3 outcome semantics
+
+DISPATCHED still identifies a queued request. `executeGesture` wraps the actual
+framework call under the current observation lease and marks possible dispatch
+before the call. An explicit Android refusal clears that marker; an exception
+preserves uncertainty. The marker and verification sample count are journaled.
+A duplicate framework call for the same id is rejected.
+
+After a sent action, bad OCR/visual samples reset the confirmation run and wait
+within a fixed eight-second verification budget. No gesture is scheduled in this
+phase. Validity requires two distinct post-completion captured frames with a
+one-level increase, matching selected cost text and unchanged other upgrade levels.
+Pre-action max age remains 750 ms; post-action OCR max age is two seconds.
+
+Failure/cancellation/timeout after possible dispatch produces UNCONFIRMED, never
+a no-purchase FAILED result. It blocks rearming until explicit game review, then
+records REVIEWED without changing the prior outcome to VERIFIED. The review gate
+is process-local; pending jobs are never restored after process death, and
+unfinished historical receipts remain unverified.

@@ -1,17 +1,17 @@
 # CatGunner AutoPilot
 
 Private, on-device Android assistant for Idle Cat Gunner (`com.Chodun.CatGunner`).
-Version 0.3.2 implements calibration and an explicitly armed **single-purchase
+Version 0.3.3 implements calibration and an explicitly armed **single-purchase
 test**. Adaptive buying and Rebirth Rush remain future milestones. Green banknotes
 are the only permitted currency; gems, unknown currencies and real money are forbidden.
 
 ## Download on your phone or computer
 
-- **[Download Pixel 10 APK (16.8 MB)](https://github.com/Pietvdberg/CatGunner-automation/raw/refs/tags/v0.3.2/downloads/AutoPilot-Pixel10-0.3.2.apk)**
-- **[Download ZIP with APK and USB-install instructions (9.4 MB)](https://github.com/Pietvdberg/CatGunner-automation/raw/refs/tags/v0.3.2/downloads/AutoPilot-Pixel10-download.zip)**
+- **[Download Pixel 10 APK (16.8 MB)](https://github.com/Pietvdberg/CatGunner-automation/raw/refs/tags/v0.3.3/downloads/AutoPilot-Pixel10-0.3.3.apk)**
+- **[Download ZIP with APK and USB-install instructions (9.4 MB)](https://github.com/Pietvdberg/CatGunner-automation/raw/refs/tags/v0.3.3/downloads/AutoPilot-Pixel10-download.zip)**
 - [View installation instructions](downloads/INSTALL.txt) and [SHA-256 checksums](downloads/SHA256SUMS).
 
-These are signed 0.3.2 builds. Hosting on GitHub fixes
+These are signed 0.3.3 builds. Hosting on GitHub fixes
 file access; it does not remove Play Protect's installation block. A work computer
 can download the files without installing software. USB/ADB installation requires
 a computer on which you are allowed to run Android Platform-Tools.
@@ -35,10 +35,13 @@ a computer on which you are allowed to run Android Platform-Tools.
    unknown layout/OCR frames suspend the request without tapping; two fresh valid
    readings must then arrive. The original deadline is never extended. Keep its normal
    upgrade bar visible. Do not manually buy upgrades during this test.
-7. Return through the notification to inspect the outcome and OCR readings.
+7. After the tap, leave the game visible for about ten seconds, then return through
+   the notification to inspect the outcome and OCR readings.
    **VERIFIED** requires two post-gesture observations of exactly one level increase;
-   a gesture callback alone is insufficient. Failed, cancelled and timed-out tests
-   never retry or rearm themselves. Each button press is a separate test.
+   a gesture callback alone is insufficient. FAILED/CANCELLED before dispatch means
+   no tap was sent. If a tap may have happened but verification cannot complete, the
+   result is UNCONFIRMED. Inspect the game, then use the explicit review button before
+   arming any new purchase. No outcome retries or rearms itself.
 
 Pause/Stop in the app or notification prevents further gesture dispatch. A gesture
 already sent to Android may finish. After Stop, starting capture needs fresh consent.
@@ -116,3 +119,21 @@ while all numeric digits remain strict. Letters inside the number, missing digit
 fractional levels and unrelated labels remain invalid. Two fresh stable readings
 and the existing currency/layout/gesture guards are still required. Timeouts now
 retain their last readiness reason rather than only reporting a generic expiry.
+
+## 0.3.3 post-purchase verification
+
+Owner testing observed real upgrades despite FAILED reports. A short-lived Power
+label animation or a malformed `Lva68` OCR result was ending verification before
+subsequent valid `Lvo168`/`Lvo169` readings arrived. Unreadable digits are still
+rejected; they are never reconstructed. After an actual tap, visual/OCR uncertainty
+now suspends verification within one fixed eight-second window, without another
+gesture. Two distinct fresh-enough post-completion frames must show exactly one
+selected level increase, matching cost text and unchanged other upgrade levels.
+
+Pre-dispatch freshness remains 750 ms. Post-action OCR observations may be up to
+two seconds old to accommodate the observed 866 ms processing delay; they must
+still have been captured after the callback. This allowance can never authorize
+a tap. Losing foreground/accessibility, pause or stop ends an unverified sent
+action as UNCONFIRMED. Only user review permits a new test, without marking the
+prior purchase automatically verified. The app records whether the actual gesture
+call was attempted/accepted separately from the queued request.

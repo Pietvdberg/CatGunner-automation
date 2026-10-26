@@ -105,3 +105,22 @@ ambiguity remains rejected. Timeout tests confirm the last blocking reason is
 retained. Actual phone purchase success is still not claimed.
 
 APK SHA-256: `dc29887718e85b8569c8a61ab7c093922b41ddef77871d480ad55618c31a95c3`.
+
+## 0.3.3 post-action verification and uncertain outcomes
+
+Ran `tools/cloud-gradle.sh -PsplitApks assembleDebug testDebugUnitTest lintDebug
+ktlintCheck`: all passed. 88 tests executed, zero failures/errors/skips.
+Regression tests cover temporary bad OCR/label reads after one accepted gesture,
+the observed 866 ms post-OCR delay, an unextended eight-second verification
+deadline, no second actual framework call, uncertainty/review blocking, queued
+versus actually sent cancellation, refusal versus exception, pre-callback image
+rejection, and retaining single post-observations without claiming VERIFIED.
+
+Owner testing observed two real Power upgrade effects despite FAILED UI reports;
+screenshots showed later values 168 and 169 alongside transient `Lva68`/Power
+label mismatch. This confirms the importance of separating action delivery and
+verification. The new automatic verification behavior still needs phone testing.
+Pre-tap age remains 750 ms; post-tap observation allowance is two seconds and
+can never authorize any gesture.
+
+APK SHA-256: `68b09d8764f2f8beb41ff13155d90e0f387a93a89163cdbdfce71990706ddbe6`.
