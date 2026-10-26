@@ -2,6 +2,8 @@ package nl.pietvdberg.catgunner.autopilot.ui
 
 import android.Manifest
 import android.app.StatusBarManager
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.ComponentName
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -30,6 +32,7 @@ import kotlinx.coroutines.launch
 import nl.pietvdberg.catgunner.autopilot.R
 import nl.pietvdberg.catgunner.autopilot.accessibility.GameAccessibilityService
 import nl.pietvdberg.catgunner.autopilot.data.CalibrationStore
+import nl.pietvdberg.catgunner.autopilot.data.LiveDiagnostics
 import nl.pietvdberg.catgunner.autopilot.data.PreviewStore
 import nl.pietvdberg.catgunner.autopilot.data.PurchaseRuntime
 import nl.pietvdberg.catgunner.autopilot.data.ReadingStore
@@ -51,6 +54,7 @@ class MainActivity : ComponentActivity() {
     private lateinit var retained: TextView
     private lateinit var purchaseStatus: TextView
     private lateinit var calibrationStatus: TextView
+    private lateinit var diagnostics: TextView
     private val purchaseButtons = mutableMapOf<UpgradeKind, Button>()
     private lateinit var start: Button
     private lateinit var pause: Button
@@ -134,6 +138,20 @@ class MainActivity : ComponentActivity() {
             CalibrationStore(this).clear()
             render()
         }
+        diagnostics = TextView(this).apply { textSize = 14f }
+        content.addView(diagnostics)
+        button(R.string.copy_diagnostics) {
+            val text = listOf(
+                "AutoPilot 0.3.1",
+                calibrationStatus.text,
+                purchaseStatus.text,
+                diagnostics.text
+            ).joinToString("\n")
+            getSystemService(ClipboardManager::class.java).setPrimaryClip(
+                ClipData.newPlainText(getString(R.string.app_name), text)
+            )
+            Toast.makeText(this, R.string.diagnostics_copied, Toast.LENGTH_SHORT).show()
+        }
         purchaseStatus = TextView(this).apply { textSize = 16f }
         content.addView(purchaseStatus)
         UpgradeKind.entries.forEach { kind ->
@@ -161,6 +179,7 @@ class MainActivity : ComponentActivity() {
             activeScope.launch { PreviewStore.preview.collect { render() } }
             activeScope.launch { PurchaseRuntime.engine.report.collect { render() } }
             activeScope.launch { ReadingStore.reading.collect { render() } }
+            activeScope.launch { LiveDiagnostics.state.collect { render() } }
             activeScope.launch {
                 while (true) {
                     delay(1000)
@@ -172,6 +191,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
+        PurchaseRuntime.engine.cancel("Returned to AutoPilot. No further tap may dispatch.")
         render()
     }
 
@@ -291,7 +311,24 @@ class MainActivity : ComponentActivity() {
         calibrationStatus.text = getString(
             R.string.calibration_status,
             getString(if (calibrated) R.string.yes else R.string.no),
-            getString(if (accessibility) R.string.yes else R.string.no)
+            getString(
+                when {
+                    accessibility -> R.string.accessibility_connected
+                    GameAccessibilityService.enabledInAndroid(
+                        this
+                    ) -> R.string.accessibility_disconnected
+                    else -> R.string.accessibility_disabled
+                }
+            )
+        )
+        val diagnostic = LiveDiagnostics.state.value
+        diagnostics.text = getString(
+            R.string.diagnostics_text,
+            diagnostic.live,
+            diagnostic.lastGame,
+            diagnostic.ocr,
+            diagnostic.service,
+            diagnostic.foreground
         )
         val report = PurchaseRuntime.engine.report.value
         val reading = ReadingStore.reading.value

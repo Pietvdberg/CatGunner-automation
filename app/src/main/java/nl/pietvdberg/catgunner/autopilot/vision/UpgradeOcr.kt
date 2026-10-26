@@ -1,11 +1,10 @@
 package nl.pietvdberg.catgunner.autopilot.vision
 
 import android.graphics.Bitmap
+import com.google.mlkit.common.MlKitException
 import com.google.mlkit.vision.common.InputImage
-import com.google.mlkit.vision.text.Text
 import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
-import nl.pietvdberg.catgunner.autopilot.domain.purchase.UpgradeReading
 
 /** One bounded in-flight strip. The bundled recognizer operates without network access. */
 class UpgradeOcr : AutoCloseable {
@@ -16,11 +15,13 @@ class UpgradeOcr : AutoCloseable {
     fun sample(
         pixels: PixelSource,
         evidence: UpgradePanelEvidence,
-        completed: (Map<UpgradeKind, UpgradeReading>?) -> Unit
+        completed: (UpgradeOcrResult) -> Unit
     ): Boolean {
         if (busy || closed) return false
         busy = true
-        val top = (1130L * pixels.height / 1280).toInt()
+        val frameWidth = pixels.width
+        val frameHeight = pixels.height
+        val top = (1130L * frameHeight / 1280).toInt()
         val bottom = (1265L * pixels.height / 1280).toInt()
         val colors = IntArray(pixels.width * (bottom - top)) { index ->
             (0xFF shl 24) or pixels.rgbAt(index % pixels.width, top + index / pixels.width)
@@ -37,15 +38,23 @@ class UpgradeOcr : AutoCloseable {
                     if (!closed) {
                         completed(
                             if (task.isSuccessful) {
-                                parse(
-                                    task.result,
-                                    pixels.width,
-                                    pixels.height,
-                                    top,
-                                    evidence
-                                )
+                                val tokens = task.result.textBlocks.flatMap { it.lines }
+                                    .flatMap { it.elements }.mapNotNull { element ->
+                                        val bounds = element.boundingBox ?: return@mapNotNull null
+                                        UpgradeOcrToken(
+                                            element.text,
+                                            bounds.exactCenterX() * 570 / frameWidth,
+                                            (top + bounds.exactCenterY()) * 1280 / frameHeight
+                                        )
+                                    }
+                                UpgradeOcrParser.parse(tokens, evidence)
                             } else {
-                                null
+                                val error = task.exception
+                                val code = (error as? MlKitException)?.errorCode
+                                UpgradeOcrResult(
+                                    null,
+                                    "OCR task: ${error?.javaClass?.simpleName}, code=$code"
+                                )
                             }
                         )
                     }
@@ -58,36 +67,9 @@ class UpgradeOcr : AutoCloseable {
         } catch (error: RuntimeException) {
             bitmap.recycle()
             busy = false
-            completed(null)
+            completed(UpgradeOcrResult(null, "OCR startup: ${error.javaClass.simpleName}"))
         }
         return true
-    }
-
-    private fun parse(
-        text: Text,
-        width: Int,
-        height: Int,
-        top: Int,
-        evidence: UpgradePanelEvidence
-    ): Map<UpgradeKind, UpgradeReading>? {
-        val elements = text.textBlocks.flatMap { it.lines }.flatMap { it.elements }
-        val readings = mutableMapOf<UpgradeKind, UpgradeReading>()
-        for (kind in UpgradeKind.entries) {
-            val offset = kind.ordinal * 169
-            fun region(left: Int, right: Int, low: Int, high: Int): String = elements.filter {
-                val bounds = it.boundingBox ?: return@filter false
-                val x = bounds.exactCenterX() * 570 / width
-                val y = (top + bounds.exactCenterY()) * 1280 / height
-                x in (left + offset).toFloat()..(right + offset).toFloat() &&
-                    y in low.toFloat()..high.toFloat()
-            }.sortedBy { it.boundingBox?.left }.joinToString("") { it.text }
-            val level = UpgradeTextParser.level(region(118, 192, 1150, 1178)) ?: return null
-            val cost = UpgradeTextParser.cost(region(95, 174, 1220, 1248)) ?: return null
-            val available = evidence.upgrades.firstOrNull { it.kind == kind }?.availability ==
-                AvailabilityAppearance.AVAILABLE
-            readings[kind] = UpgradeReading(level, cost, available)
-        }
-        return readings
     }
 
     override fun close() {

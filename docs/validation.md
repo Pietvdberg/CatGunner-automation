@@ -73,3 +73,23 @@ certificate, DEX files and model assets match the prior universal package.
 The client download itself cannot be verified from the build environment.
 
 SHA-256: `d986f658a36da8bb0e17752febbfe38a9af47bcdbbbceeb3540754a3b9e0a361`.
+
+## 0.3.1 startup waiting and diagnostic regression
+
+Ran `tools/cloud-gradle.sh -PsplitApks assembleDebug testDebugUnitTest lintDebug
+ktlintCheck`: all passed. 73 tests executed, with zero failures/errors/skips.
+New tests cover pre-dispatch waiting without extending the deadline, clearing
+partial preconditions, rejecting uncertainty after a request, preventing terminal
+request revival, exact OCR token extraction/diagnostics, and service connection
+identity during late teardown.
+
+Owner evidence from 0.3.0 showed all three available at 1080×2424, no complete OCR
+reading, a failed unknown-frame test, and a subsequently unavailable accessibility
+service. The code confirms a startup frame could fail the request immediately.
+The screenshot does not establish the cause of Android's service disconnection.
+0.3.1 corrects the startup path, guards stale instance callbacks, distinguishes
+Android's enabled setting from a real connection, and provides local copyable
+diagnostics. Phone revalidation remains outstanding; no successful real purchase
+or native OCR accuracy is claimed by these cloud tests.
+
+APK SHA-256: `e03d40afb8c961fb4e6f668574e8438e2bd21b40cdbf60ce14e29d8ca72a2608`.

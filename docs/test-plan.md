@@ -71,3 +71,16 @@ Cloud unit tests cover one-use dispatch, stable/fresh preconditions, banknote ic
 version/dimension mismatch, missing values, false availability, timeout, late
 callbacks, verification rules and epoch leases. They do not execute real gestures
 or the bundled native OCR model on a phone.
+
+## 0.3.1 phone regression checks
+
+- Enable accessibility until the app explicitly says Connected. If Android shows
+  it enabled but the app says disconnected, turn that service off and back on once.
+- Arm one test while the game is reopening. Startup frames must show Waiting with
+  no tap; only two new complete fresh readings permit the one gesture request.
+- Startup uncertainty must not extend the original 30-second deadline. After a
+  gesture request, unknown evidence still fails and cannot trigger a retry.
+- Return to AutoPilot before a request dispatches; it must cancel without a tap.
+- If failure persists, use Copy test diagnostics and inspect the exact last game
+  detector reason, foreground status, OCR field strings/task error, and accessibility
+  connection event. No need to guess values from an empty historical reading.

@@ -43,3 +43,12 @@ tile and Resume only resume observation; they cannot arm or repeat a purchase.
 Notification text includes the current test outcome. Adaptive optimization,
 Rebirth Rush, Room analytics and DataStore preferences are future milestones.
 The current small profiles/receipts use atomic JSON without storing image data.
+
+In 0.3.1, `waitForEvidence` suspends ARMED requests during game-launch/OCR startup,
+clearing partial preconditions without extending their original deadline. It never
+revives a terminal request; after DISPATCHED it fails instead of waiting. Returning
+to AutoPilot cancels active tests. A connection-identity registry ignores teardown
+from superseded accessibility instances so an old callback cannot erase a new
+connection. Android's enabled setting and actual connection are shown separately.
+`LiveDiagnostics` retains bounded local text about the latest verified game frame
+and OCR fields. Clipboard export is explicitly user initiated.

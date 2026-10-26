@@ -227,6 +227,60 @@ class SinglePurchaseEngineTest {
         assertEquals(0, dispatches)
     }
 
+    @Test
+    fun startupFramesWaitWithoutAttemptingAGesture() {
+        arm()
+        engine.waitForEvidence("Game is opening")
+        assertEquals(PurchasePhase.ARMED, engine.report.value.phase)
+        assertEquals(0, dispatches)
+        feed()
+        feed()
+        assertEquals(1, dispatches)
+    }
+
+    @Test
+    fun anUnknownFrameClearsPreviousPreconditionSoTwoNewFramesAreRequired() {
+        arm()
+        feed()
+        engine.waitForEvidence("Unknown layout")
+        feed()
+        assertEquals(0, dispatches)
+        feed()
+        assertEquals(1, dispatches)
+    }
+
+    @Test
+    fun waitingDoesNotExtendTheOriginalThirtySecondDeadline() {
+        arm()
+        repeat(31) {
+            now += 1000
+            engine.waitForEvidence("Waiting for OCR")
+        }
+        assertEquals(PurchasePhase.FAILED, engine.report.value.phase)
+        assertEquals(0, dispatches)
+    }
+
+    @Test
+    fun unknownEvidenceAfterDispatchFailsInsteadOfWaitingOrRetrying() {
+        dispatchOnce()
+        engine.waitForEvidence("Obscured control")
+        assertEquals(PurchasePhase.FAILED, engine.report.value.phase)
+        feed()
+        assertEquals(1, dispatches)
+    }
+
+    @Test
+    fun waitingNeverRevivesACancelledOrFailedRequest() {
+        arm()
+        engine.cancel("User paused")
+        engine.waitForEvidence("New frame")
+        assertEquals(PurchasePhase.CANCELLED, engine.report.value.phase)
+        arm()
+        engine.unsafe("Disconnected")
+        engine.waitForEvidence("Reconnected")
+        assertEquals(PurchasePhase.FAILED, engine.report.value.phase)
+    }
+
     private fun arm() {
         assertTrue(engine.arm(UpgradeKind.POWER, profile, lease))
     }

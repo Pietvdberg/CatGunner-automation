@@ -1,17 +1,17 @@
 # CatGunner AutoPilot
 
 Private, on-device Android assistant for Idle Cat Gunner (`com.Chodun.CatGunner`).
-Version 0.3.0 implements calibration and an explicitly armed **single-purchase
+Version 0.3.1 implements calibration and an explicitly armed **single-purchase
 test**. Adaptive buying and Rebirth Rush remain future milestones. Green banknotes
 are the only permitted currency; gems, unknown currencies and real money are forbidden.
 
 ## Download on your phone or computer
 
-- **[Download Pixel 10 APK (16.8 MB)](https://github.com/Pietvdberg/CatGunner-automation/raw/refs/heads/main/downloads/AutoPilot-Pixel10.apk)**
-- **[Download ZIP with APK and USB-install instructions (9.4 MB)](https://github.com/Pietvdberg/CatGunner-automation/raw/refs/heads/main/downloads/AutoPilot-Pixel10-download.zip)**
+- **[Download Pixel 10 APK (16.8 MB)](https://github.com/Pietvdberg/CatGunner-automation/raw/refs/tags/v0.3.1/downloads/AutoPilot-Pixel10-0.3.1.apk)**
+- **[Download ZIP with APK and USB-install instructions (9.4 MB)](https://github.com/Pietvdberg/CatGunner-automation/raw/refs/tags/v0.3.1/downloads/AutoPilot-Pixel10-download.zip)**
 - [View installation instructions](downloads/INSTALL.txt) and [SHA-256 checksums](downloads/SHA256SUMS).
 
-These are the same signed 0.3.0 files supplied in the chat. Hosting on GitHub fixes
+These are signed 0.3.1 builds. Hosting on GitHub fixes
 file access; it does not remove Play Protect's installation block. A work computer
 can download the files without installing software. USB/ADB installation requires
 a computer on which you are allowed to run Android Platform-Tools.
@@ -31,7 +31,9 @@ a computer on which you are allowed to run Android Platform-Tools.
    Speed and Money in turn, tapping each outlined inner area in the preview. Check
    that the pictured controls use green banknotes, then save all three targets.
 6. Return and press **Resume**. Choose **Test ONE Power purchase** (or Speed/Money).
-   The app opens the game and arms one request for up to 30 seconds. Keep its normal
+   The app opens the game and arms one request for up to 30 seconds. While opening,
+   unknown layout/OCR frames suspend the request without tapping; two fresh valid
+   readings must then arrive. The original deadline is never extended. Keep its normal
    upgrade bar visible. Do not manually buy upgrades during this test.
 7. Return through the notification to inspect the outcome and OCR readings.
    **VERIFIED** requires two post-gesture observations of exactly one level increase;
@@ -90,3 +92,18 @@ For a smaller standalone Pixel 10 download, build ABI splits using
 `app/build/outputs/apk/debug/app-arm64-v8a-debug.apk`; it contains the same app
 and bundled OCR model as the universal package. The distribution copy is
 `dist/AutoPilot-Pixel10.apk`. Default builds still support all four ABIs.
+
+## 0.3.1 startup fix and phone diagnostics
+
+Before the first gesture request, temporary startup frames or cold OCR now wait
+within the original 30-second deadline rather than immediately failing. An invalid
+frame clears any partial precondition; two new valid readings are required.
+After a gesture request, uncertainty still fails immediately and never retries.
+Returning to AutoPilot cancels any active test before another tap can dispatch.
+
+Accessibility status now distinguishes Connected, Disabled in Android, and Enabled
+but disconnected. Follow the displayed setting instructions until Connected.
+The app also retains the last game detector scores, exact level/cost OCR fields
+and task error codes. **Copy test diagnostics** places this local text on your
+clipboard only when pressed; paste it into the chat if a new test fails. No image
+or diagnostic text is uploaded automatically.

@@ -9,8 +9,10 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import nl.pietvdberg.catgunner.autopilot.accessibility.ForegroundStatus
 import nl.pietvdberg.catgunner.autopilot.accessibility.GameAccessibilityService
 import nl.pietvdberg.catgunner.autopilot.data.CalibrationStore
+import nl.pietvdberg.catgunner.autopilot.data.LiveDiagnostics
 import nl.pietvdberg.catgunner.autopilot.data.PreviewStore
 import nl.pietvdberg.catgunner.autopilot.data.PurchaseJournal
 import nl.pietvdberg.catgunner.autopilot.data.PurchaseRuntime
@@ -39,8 +41,6 @@ class PurchasePipeline(private val context: Context) : AutoCloseable {
     private val engine = PurchaseRuntime.engine
     private var lastRecognizedAt = -1L
     private var closed = false
-    private var trackedRequest = ""
-    private var requestSawGame = false
     private var latestBanknoteMatched = false
 
     fun sample(pixels: PixelSource, generation: Long, capturedAt: Long) {
@@ -49,25 +49,18 @@ class PurchasePipeline(private val context: Context) : AutoCloseable {
         val evidence = detector.detect(pixels)
         controller.publishEvidence(generation, evidence)
         val accessibility = GameAccessibilityService.instance
-        val foreground = accessibility?.isGameForeground() == true
-        val phase = engine.report.value.phase
+        val foregroundStatus = accessibility?.foregroundStatus() ?: ForegroundStatus.DISCONNECTED
+        val foreground = foregroundStatus == ForegroundStatus.VERIFIED
+        LiveDiagnostics.foreground(foregroundStatus.name)
         val requestId = engine.report.value.id
-        if (trackedRequest != requestId) {
-            trackedRequest = requestId
-            requestSawGame = false
-        }
+        LiveDiagnostics.live(evidence)
         if (!foreground) {
-            if (phase == PurchasePhase.DISPATCHED ||
-                phase == PurchasePhase.VERIFYING ||
-                (phase == PurchasePhase.ARMED && requestSawGame)
-            ) {
-                engine.unsafe("Game is no longer foreground. No retry.")
-            }
+            engine.waitForEvidence("Foreground check: ${foregroundStatus.name}")
             return
         }
-        if (phase == PurchasePhase.ARMED) requestSawGame = true
+        LiveDiagnostics.game(evidence)
         if (!evidence.recognized) {
-            engine.unsafe("Unrecognized or obscured upgrade controls. No gesture permitted.")
+            engine.waitForEvidence("Upgrade controls: ${LiveDiagnostics.describe(evidence)}")
             return
         }
         lastRecognizedAt = capturedAt
@@ -79,7 +72,10 @@ class PurchasePipeline(private val context: Context) : AutoCloseable {
         val kind = engine.report.value.kind
         val matchedBanknote = kind != null && banknote.matches(pixels, kind)
         latestBanknoteMatched = matchedBanknote
-        ocr.sample(pixels, evidence) { upgrades ->
+        ocr.sample(pixels, evidence) { result ->
+            val ageMillis = SystemClock.elapsedRealtime() - capturedAt
+            LiveDiagnostics.ocr("Result age (ms): $ageMillis. ${result.detail}")
+            val upgrades = result.upgrades
             if (closed ||
                 controller.observationLease() != actionLease ||
                 engine.report.value.id != requestId
@@ -87,11 +83,15 @@ class PurchasePipeline(private val context: Context) : AutoCloseable {
                 return@sample
             }
             if (GameAccessibilityService.instance?.isGameForeground() != true) {
-                engine.unsafe("Game changed while reading values.")
+                engine.waitForEvidence("Game changed while reading values.")
                 return@sample
             }
             if (upgrades == null) {
-                engine.unsafe("Upgrade levels or costs could not be read reliably. No retry.")
+                engine.waitForEvidence("OCR is not ready: ${result.detail}")
+                return@sample
+            }
+            if (SystemClock.elapsedRealtime() - capturedAt > 750) {
+                engine.waitForEvidence("OCR frame is stale; waiting for a fresh reading.")
                 return@sample
             }
             val reading = GameReading(

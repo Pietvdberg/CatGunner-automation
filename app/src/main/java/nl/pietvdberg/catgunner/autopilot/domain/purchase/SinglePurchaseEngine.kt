@@ -77,6 +77,18 @@ class SinglePurchaseEngine(private val clock: () -> Long) {
         if (active()) finish(PurchasePhase.FAILED, reason)
     }
 
+    /** Suspend before the first gesture until two new valid readings or the original deadline. */
+    @Synchronized
+    fun waitForEvidence(reason: String) {
+        tick()
+        if (report.value.phase == PurchasePhase.ARMED) {
+            previous = null
+            mutableReport.value = report.value.copy(detail = "Waiting, no tap attempted: $reason")
+        } else {
+            unsafe(reason)
+        }
+    }
+
     @Synchronized
     fun tick() {
         if (active() && clock() > deadline) {

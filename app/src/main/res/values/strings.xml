@@ -1,6 +1,6 @@
 <resources>
     <string name="app_name">CatGunner AutoPilot</string>
-    <string name="intro">Single-purchase test build\n1. Enable the AutoPilot accessibility service.\n2. Start capture, open the game and wait for its upgrade bar.\n3. Return here and calibrate the three green-banknote controls.\n4. Resume capture, then choose ONE purchase test.\nAutomatic buying and Rebirth Rush are not enabled.</string>
+    <string name="intro">AutoPilot 0.3.1 — Single-purchase test build\n1. Enable the AutoPilot accessibility service.\n2. Start capture, open the game and wait for its upgrade bar.\n3. Return here and calibrate the three green-banknote controls.\n4. Resume capture, then choose ONE purchase test.\nAutomatic buying and Rebirth Rush are not enabled.</string>
     <string name="start">Start screen capture</string>
     <string name="pause">Pause</string>
     <string name="resume">Resume</string>
@@ -57,4 +57,10 @@
     <string name="test_money">Test ONE Money purchase</string>
     <string name="game_missing">Idle Cat Gunner could not be opened.</string>
     <string name="calibration_preview_description">Game upgrade bar with outlined safe target areas. Select each upgrade and tap its outlined region.</string>
+    <string name="accessibility_connected">Connected</string>
+    <string name="accessibility_disconnected">Enabled in Android but disconnected. Open accessibility settings and turn AutoPilot off, then on.</string>
+    <string name="accessibility_disabled">Disabled in Android. Enable AutoPilot in accessibility settings.</string>
+    <string name="copy_diagnostics">Copy test diagnostics</string>
+    <string name="diagnostics_copied">Diagnostics copied. Paste them into the chat if the test fails.</string>
+    <string name="diagnostics_text">Live detection: %1$s\nLast game detection: %2$s\nLast OCR attempt: %3$s\nAccessibility event: %4$s\nForeground check: %5$s</string>
 </resources>

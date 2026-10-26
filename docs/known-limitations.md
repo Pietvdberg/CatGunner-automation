@@ -1,6 +1,6 @@
 # Known limitations
 
-Version 0.3.0 is a calibrated single-purchase test build, not the autonomous MVP.
+Version 0.3.1 is a calibrated single-purchase test build, not the autonomous MVP.
 The owner confirmed capture startup and notification display on a Pixel 10 running
 Android 16. New calibration, native OCR accuracy, accessibility dispatch and
 post-purchase verification remain untested on the physical phone.
@@ -28,3 +28,10 @@ calibration. Capture tokens are never reused after stopping.
 Gems, unknown currency and real money remain forbidden. The bundled model operates
 locally, and network permissions are explicitly removed from the merged manifest.
 No performance, battery, thermal, or rebirth-recovery claims have been established.
+
+Owner testing of 0.3.0 recognized all three controls at 1080×2424, but a test failed
+on an unknown frame and the service later appeared unavailable. The launch-time
+immediate-failure path and stale-service teardown are corrected in 0.3.1. The
+provided screenshot does not establish why Android disconnected the service or
+whether native OCR is parsing successfully; new diagnostics expose those facts.
+These changes are unit/build validated, not yet validated on the owner's phone.
