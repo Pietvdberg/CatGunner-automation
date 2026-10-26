@@ -21,7 +21,8 @@ class PurchaseJournal(context: Context) {
                 val event = previous.getJSONObject(it)
                 event.optString("id") == report.id &&
                     event.optString("phase") == report.phase.name &&
-                    event.optBoolean("gestureDispatched") == report.gestureDispatched
+                    event.optBoolean("gestureDispatched") == report.gestureDispatched &&
+                    event.optLong("dispatchAttempt") == report.dispatchAttempt
             }
         ) {
             return@synchronized
@@ -34,6 +35,7 @@ class PurchaseJournal(context: Context) {
         retained.put(
             JSONObject().put("id", report.id).put("phase", report.phase.name)
                 .put("autoRunId", report.autoRunId)
+                .put("dispatchAttempt", report.dispatchAttempt)
                 .put("gestureDispatched", report.gestureDispatched)
                 .put("verificationSamples", report.verificationSamples)
                 .put("upgrade", report.kind?.name).put("detail", report.detail)

@@ -17,10 +17,12 @@ import nl.pietvdberg.catgunner.autopilot.data.PreviewStore
 import nl.pietvdberg.catgunner.autopilot.data.PurchaseJournal
 import nl.pietvdberg.catgunner.autopilot.data.PurchaseRuntime
 import nl.pietvdberg.catgunner.autopilot.data.ReadingStore
+import nl.pietvdberg.catgunner.autopilot.domain.purchase.DispatchBlock
+import nl.pietvdberg.catgunner.autopilot.domain.purchase.DispatchGuard
+import nl.pietvdberg.catgunner.autopilot.domain.purchase.DispatchSnapshot
 import nl.pietvdberg.catgunner.autopilot.domain.purchase.GameReading
 import nl.pietvdberg.catgunner.autopilot.domain.purchase.PurchasePhase
 import nl.pietvdberg.catgunner.autopilot.domain.state.AutoPilotSession
-import nl.pietvdberg.catgunner.autopilot.vision.AvailabilityAppearance
 import nl.pietvdberg.catgunner.autopilot.vision.BanknoteMatcher
 import nl.pietvdberg.catgunner.autopilot.vision.PixelSource
 import nl.pietvdberg.catgunner.autopilot.vision.UpgradeKind
@@ -83,8 +85,10 @@ class PurchasePipeline(private val context: Context) : AutoCloseable {
             ) {
                 return@sample
             }
-            if (GameAccessibilityService.instance?.isGameForeground() != true) {
-                foregroundLost("Game changed while reading values.")
+            val callbackForeground = GameAccessibilityService.instance?.foregroundStatus()
+                ?: ForegroundStatus.DISCONNECTED
+            if (callbackForeground != ForegroundStatus.VERIFIED) {
+                foregroundLost("OCR completion foreground check: $callbackForeground")
                 return@sample
             }
             if (upgrades == null) {
@@ -116,42 +120,80 @@ class PurchasePipeline(private val context: Context) : AutoCloseable {
                     } catch (cancelled: CancellationException) {
                         throw cancelled
                     } catch (error: Exception) {
-                        engine.gestureCompleted(id, false)
+                        LiveDiagnostics.dispatch(
+                            "Receipt write failed before send: ${error.javaClass.simpleName}"
+                        )
+                        engine.rejectQueued(id, request.dispatchAttempt, "Receipt write failed.")
                         return@launch
                     }
-                    val accepted = controller.dispatchIfCurrent(lease) {
+                    var checkedCurrentSession = false
+                    controller.dispatchIfCurrent(lease) {
+                        checkedCurrentSession = true
                         val liveProfile = CalibrationStore(context).load()
                         val current = controller.state.value.visualEvidence
-                        val fresh = SystemClock.elapsedRealtime() - lastRecognizedAt in 0..500
-                        if (closed ||
-                            engine.report.value.id != id ||
-                            engine.report.value.phase != PurchasePhase.DISPATCHED ||
-                            SystemClock.elapsedRealtime() - capturedAt !in 0..750 ||
-                            !fresh ||
-                            latestBanknoteMatches[kind] != true ||
-                            current?.recognized != true ||
-                            current.upgrades.firstOrNull { it.kind == kind }?.availability !=
-                            AvailabilityAppearance.AVAILABLE ||
-                            liveProfile?.matches(
-                                nativeWidth,
-                                nativeHeight,
-                                CalibrationStore.gameVersion(context)
-                            ) !=
-                            true ||
-                            liveProfile.targets[kind] != point ||
-                            GameAccessibilityService.instance?.isGameForeground() != true
-                        ) {
-                            false
-                        } else {
-                            engine.executeGesture(id) {
-                                GameAccessibilityService.instance?.tapOnce(
+                        val observationAge = SystemClock.elapsedRealtime() - capturedAt
+                        val visualAge = SystemClock.elapsedRealtime() - lastRecognizedAt
+                        val decision = DispatchGuard.evaluate(
+                            DispatchSnapshot(
+                                !closed &&
+                                    engine.report.value.id == id &&
+                                    engine.report.value.phase == PurchasePhase.DISPATCHED &&
+                                    engine.report.value.dispatchAttempt == request.dispatchAttempt,
+                                liveProfile?.matches(
+                                    nativeWidth,
+                                    nativeHeight,
+                                    CalibrationStore.gameVersion(context)
+                                ) ==
+                                    true,
+                                liveProfile?.targets?.get(kind) == point,
+                                GameAccessibilityService.instance?.isGameForeground() == true,
+                                latestBanknoteMatches[kind] == true,
+                                observationAge, visualAge, current?.recognized == true,
+                                current?.upgrades?.firstOrNull { it.kind == kind }?.availability
+                            )
+                        )
+                        LiveDiagnostics.dispatch(
+                            listOf(
+                                "Attempt ${request.dispatchAttempt}: $decision",
+                                "OCR age=$observationAge ms",
+                                "visual age=$visualAge ms",
+                                "target=$kind",
+                                "banknote=${latestBanknoteMatches[kind]}"
+                            ).joinToString("; ")
+                        )
+                        when {
+                            decision == DispatchBlock.NONE -> engine.executeGesture(
+                                id,
+                                request.dispatchAttempt
+                            ) {
+                                val accepted = GameAccessibilityService.instance?.tapOnce(
                                     point.x * nativeWidth,
                                     point.y * nativeHeight
-                                ) { succeeded -> engine.gestureCompleted(id, succeeded) } == true
+                                ) { succeeded ->
+                                    LiveDiagnostics.dispatch(
+                                        "Android gesture callback: completed=$succeeded"
+                                    )
+                                    engine.gestureCompleted(id, succeeded, request.dispatchAttempt)
+                                } == true
+                                LiveDiagnostics.dispatch(
+                                    "Gesture service accepted=$accepted; target=$kind"
+                                )
+                                accepted
+                            }
+                            decision.canWaitBeforeTap -> {
+                                engine.deferQueued(id, request.dispatchAttempt, decision.name)
+                                false
+                            }
+                            else -> {
+                                engine.rejectQueued(id, request.dispatchAttempt, decision.name)
+                                false
                             }
                         }
                     }
-                    if (!accepted) engine.gestureCompleted(id, false)
+                    if (!checkedCurrentSession) {
+                        LiveDiagnostics.dispatch("No tap: capture session paused or replaced.")
+                        engine.rejectQueued(id, request.dispatchAttempt, "Capture session changed.")
+                    }
                 }
                 true
             }
@@ -160,7 +202,7 @@ class PurchasePipeline(private val context: Context) : AutoCloseable {
     }
 
     private fun foregroundLost(reason: String) {
-        PurchaseRuntime.autoRunner.foregroundLost()
+        PurchaseRuntime.autoRunner.foregroundLost(reason)
         if (engine.report.value.phase == PurchasePhase.ARMED) {
             engine.waitForEvidence(reason)
         } else {

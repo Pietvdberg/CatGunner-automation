@@ -152,8 +152,8 @@ class AutoPurchaseRunner(private val engine: SinglePurchaseEngine, private val c
     }
 
     @Synchronized
-    fun foregroundLost() {
-        if (report.value.active && sawGame) stop("Game left the foreground. No automatic resume.")
+    fun foregroundLost(reason: String = "Game left the foreground. No automatic resume.") {
+        if (report.value.active && sawGame) stop(reason)
     }
 
     @Synchronized

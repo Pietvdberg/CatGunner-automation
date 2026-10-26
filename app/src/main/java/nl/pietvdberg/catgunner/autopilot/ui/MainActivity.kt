@@ -152,7 +152,7 @@ class MainActivity : ComponentActivity() {
         content.addView(diagnostics)
         button(R.string.copy_diagnostics) {
             val text = listOf(
-                "AutoPilot 0.4.0",
+                "AutoPilot 0.4.1",
                 calibrationStatus.text,
                 purchaseStatus.text,
                 autoStatus.text,
@@ -370,7 +370,8 @@ class MainActivity : ComponentActivity() {
             diagnostic.lastGame,
             diagnostic.ocr,
             diagnostic.service,
-            diagnostic.foreground
+            diagnostic.foreground,
+            diagnostic.dispatch
         )
         val report = PurchaseRuntime.engine.report.value
         val reading = ReadingStore.reading.value

@@ -28,8 +28,11 @@ class GameAccessibilityService : AccessibilityService() {
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         if (instance !== this) return
-        val foreground = isGameForeground()
-        if (!foreground) PurchaseRuntime.autoRunner.foregroundLost()
+        val status = foregroundStatus()
+        val foreground = status == ForegroundStatus.VERIFIED
+        if (!foreground) {
+            PurchaseRuntime.autoRunner.foregroundLost("Accessibility window event: $status")
+        }
         if (!foreground &&
             PurchaseRuntime.engine.report.value.phase in setOf(
                 PurchasePhase.DISPATCHED,

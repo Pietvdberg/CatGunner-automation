@@ -1,6 +1,6 @@
 # Known limitations
 
-Version 0.4.0 is a bounded automatic-purchase prototype, not the complete MVP.
+Version 0.4.1 is a bounded automatic-purchase prototype, not the complete MVP.
 The owner validated Power, Speed and Money single purchases on Pixel 10 / Android
 16 at 1080×2424, each showing VERIFIED 2/2. See phone-validation.md. The new run
 orchestration is cloud tested but still needs handset validation.
@@ -37,3 +37,10 @@ Green banknotes only. Gems, unknown currencies and real money remain forbidden.
 The bundled OCR model runs locally, and network permissions are removed from the
 merged manifest. No sustained-session, battery/thermal, action-latency percentile
 or rebirth-recovery performance claims have been established.
+
+The owner observed partial 0.4.0 runs (2/3 before foreground cancellation, 1/5
+before a no-send failure). 0.4.1 addresses the queue-to-send transient evidence
+gap and diagnostic ambiguity without relaxing the 750 ms pre-action limit or
+retrying actual gestures. These changes are cloud validated only. The exact
+original final-gate failure is not established by the supplied screenshots;
+new diagnostics expose it if it persists.

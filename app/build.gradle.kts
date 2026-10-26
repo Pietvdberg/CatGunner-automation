@@ -12,8 +12,8 @@ android {
         applicationId = "nl.pietvdberg.catgunner.autopilot"
         minSdk = 26
         targetSdk = 36
-        versionCode = 7
-        versionName = "0.4.0-bounded-auto"
+        versionCode = 8
+        versionName = "0.4.1-bounded-auto"
     }
     splits {
         abi {

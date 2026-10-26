@@ -96,3 +96,22 @@ WAITING has a fixed 30-second readiness budget per new step. Existing one-purcha
 deadlines govern an owned step. Failure, uncertain outcome, lease change, explicit
 stop, access revocation or foreground loss stops the run. Resume never starts a
 run; a fresh explicit command is required. All pending run state is volatile.
+
+## 0.4.1 queued preparation tokens
+
+`DispatchGuard` classifies the last pre-send check. Only stale OCR/frame and
+unknown visual evidence can wait before a tap. Finance, calibration, target,
+foreground and request-identity failures remain refusals. Deferring an unsent
+request clears its precondition pair, preserves its original 30-second deadline
+and requires two new readings; it does not call the gesture API.
+
+Each queued preparation increments `dispatchAttempt`. The deferred job, final
+framework call, receipt and callback carry that token. Obsolete tasks cannot
+execute or change a later attempt with the same purchase id. Preparation deadline
+is bounded by the original arm deadline. The two-second callback deadline starts
+only around the actual framework call; post-action verification remains separate.
+Actual gesture refusal/cancellation never becomes a preparatory recheck.
+
+A separate high-importance outcome channel posts only terminal automatic-run
+notifications, never active-run alerts. Foreground-stop details and dispatch
+checks are retained locally for explicit diagnostic copying.

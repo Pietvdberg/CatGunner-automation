@@ -142,3 +142,23 @@ handset validation. No expected-gain optimization, suffix-scale inference, reser
 policy, fast batch or Rebirth Rush performance is claimed.
 
 APK SHA-256: `52bfb68a4e926aca473ba3040b50555770d038e1969be16723e58d8401e163b2`.
+
+## 0.4.1 final-gate preparation regression and run outcomes
+
+Ran `tools/cloud-gradle.sh -PsplitApks assembleDebug testDebugUnitTest lintDebug
+ktlintCheck`: all passed. 123 tests executed, zero failures/errors/skips.
+New tests classify transient versus hard dispatch gates; require two new readings
+after unsent deferral; block stale jobs/callbacks by preparation token; retain
+original readiness deadlines (including queued attempts near expiry); prohibit
+deferral after an accepted gesture; preserve specific refusal reasons; and defer
+only unsent preparation timeouts. The 750 ms OCR and 500 ms final visual gates,
+finance checks and five-purchase cap remain unchanged. Actual gesture rejection
+still terminates the run with no retry.
+
+Owner evidence establishes partial 0.4.0 runs, not a complete cap-sized run. It
+does not reveal the exact old final-gate block because those paths reported a
+generic pre-send cancellation. 0.4.1 logs each block and actual callback separately,
+retains foreground-event status, and adds terminal-run outcome notifications.
+Notification/device behavior and the new deferral path still need phone validation.
+
+APK SHA-256: `0f75e74f06485bdbe3712c7c2c3168a89f363746230e819be76e200ec42c2dcf`.

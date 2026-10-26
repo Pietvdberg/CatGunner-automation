@@ -1,6 +1,6 @@
 <resources>
     <string name="app_name">CatGunner AutoPilot</string>
-    <string name="intro">AutoPilot 0.4.0 — Bounded automatic purchases\n1. Enable the AutoPilot accessibility service.\n2. Start capture, open the game and wait for its upgrade bar.\n3. Return here and calibrate the three green-banknote controls.\n4. Resume capture, then choose ONE purchase test.\nBounded automatic runs are optional and off until started. Rebirth Rush is not enabled.</string>
+    <string name="intro">AutoPilot 0.4.1 — Bounded automatic purchases\n1. Enable the AutoPilot accessibility service.\n2. Start capture, open the game and wait for its upgrade bar.\n3. Return here and calibrate the three green-banknote controls.\n4. Resume capture, then choose ONE purchase test.\nBounded automatic runs are optional and off until started. Rebirth Rush is not enabled.</string>
     <string name="start">Start screen capture</string>
     <string name="pause">Pause</string>
     <string name="resume">Resume</string>
@@ -62,7 +62,7 @@
     <string name="accessibility_disabled">Disabled in Android. Enable AutoPilot in accessibility settings.</string>
     <string name="copy_diagnostics">Copy test diagnostics</string>
     <string name="diagnostics_copied">Diagnostics copied. Paste them into the chat if the test fails.</string>
-    <string name="diagnostics_text">Live detection: %1$s\nLast game detection: %2$s\nLast OCR attempt: %3$s\nAccessibility event: %4$s\nForeground check: %5$s</string>
+    <string name="diagnostics_text">Live detection: %1$s\nLast game detection: %2$s\nLast OCR attempt: %3$s\nAccessibility event: %4$s\nForeground check: %5$s\nLast dispatch check: %6$s</string>
     <string name="review_outcome">I checked the game — allow a NEW purchase test</string>
     <string name="tap_possible">Yes</string>
     <string name="tap_none">No</string>
@@ -81,4 +81,8 @@
         <item>Lowest comparable displayed price</item>
         <item>Rotate Power → Speed → Money</item>
     </string-array>
+    <string name="auto_outcome_channel">Automatic run completion and stops</string>
+    <string name="auto_outcome_complete">Automatic run complete</string>
+    <string name="auto_outcome_stopped">Automatic run stopped</string>
+    <string name="auto_outcome_body">Verified: %1$d/%2$d — %3$s</string>
 </resources>

@@ -28,6 +28,9 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.distinctUntilChangedBy
+import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import nl.pietvdberg.catgunner.autopilot.R
@@ -83,6 +86,55 @@ class CaptureService : Service() {
                 NotificationManager.IMPORTANCE_LOW
             )
         )
+        getSystemService(NotificationManager::class.java).createNotificationChannel(
+            NotificationChannel(
+                OUTCOME_CHANNEL_ID,
+                getString(R.string.auto_outcome_channel),
+                NotificationManager.IMPORTANCE_HIGH
+            )
+        )
+        scope.launch {
+            PurchaseRuntime.autoRunner.report.drop(1)
+                .filter { it.phase == AutoRunPhase.COMPLETE || it.phase == AutoRunPhase.STOPPED }
+                .distinctUntilChangedBy { it.id }.collect { run ->
+                    val allowed = Build.VERSION.SDK_INT < 33 ||
+                        checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) ==
+                        PackageManager.PERMISSION_GRANTED
+                    if (allowed) {
+                        val openApp = PendingIntent.getActivity(
+                            this@CaptureService,
+                            0,
+                            Intent(this@CaptureService, MainActivity::class.java),
+                            PendingIntent.FLAG_IMMUTABLE
+                        )
+                        val notice = Notification.Builder(this@CaptureService, OUTCOME_CHANNEL_ID)
+                            .setSmallIcon(R.drawable.ic_autopilot)
+                            .setContentTitle(
+                                getString(
+                                    if (run.phase ==
+                                        AutoRunPhase.COMPLETE
+                                    ) {
+                                        R.string.auto_outcome_complete
+                                    } else {
+                                        R.string.auto_outcome_stopped
+                                    }
+                                )
+                            )
+                            .setContentText(
+                                getString(
+                                    R.string.auto_outcome_body,
+                                    run.verified,
+                                    run.limit,
+                                    run.detail
+                                )
+                            )
+                            .setContentIntent(openApp).setAutoCancel(true).build()
+                        getSystemService(
+                            NotificationManager::class.java
+                        ).notify(OUTCOME_NOTIFICATION_ID, notice)
+                    }
+                }
+        }
         if (Build.VERSION.SDK_INT >= 33) {
             registerReceiver(
                 screenLockReceiver,
@@ -304,5 +356,7 @@ class CaptureService : Service() {
         const val EXTRA_CONSENT = "consent"
         private const val CHANNEL_ID = "capture_controls"
         private const val NOTIFICATION_ID = 1
+        private const val OUTCOME_CHANNEL_ID = "auto_run_outcomes"
+        private const val OUTCOME_NOTIFICATION_ID = 2
     }
 }

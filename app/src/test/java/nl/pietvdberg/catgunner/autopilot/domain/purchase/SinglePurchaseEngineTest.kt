@@ -419,13 +419,13 @@ class SinglePurchaseEngineTest {
     }
 
     @Test
-    fun uncertaintyWhileOnlyQueuedStillRefusesTheActualTap() {
+    fun uncertaintyWhileQueuedDefersAndRefusesTheOldAttempt() {
         arm()
         feed()
         now += 250
         engine.onReading(reading()) { _, _, _ -> true }
         engine.waitForEvidence("POWER obscured before send")
-        assertEquals(PurchasePhase.FAILED, engine.report.value.phase)
+        assertEquals(PurchasePhase.ARMED, engine.report.value.phase)
         assertFalse(
             engine.executeGesture(engine.report.value.id) {
                 dispatches++
@@ -446,6 +446,127 @@ class SinglePurchaseEngineTest {
         assertEquals(0, engine.report.value.verificationSamples)
         assertEquals(PurchasePhase.VERIFYING, engine.report.value.phase)
         assertEquals(1, dispatches)
+    }
+
+    @Test
+    fun transientPreSendMissRequiresTwoNewReadingsAndOnlyOneActualGesture() {
+        arm()
+        feed()
+        now += 250
+        engine.onReading(reading()) { _, _, _ -> true }
+        val id = engine.report.value.id
+        val oldAttempt = engine.report.value.dispatchAttempt
+        assertTrue(engine.deferQueued(id, oldAttempt, "LAYOUT_UNKNOWN"))
+        assertEquals(PurchasePhase.ARMED, engine.report.value.phase)
+        feed()
+        assertEquals(0, dispatches)
+        feed()
+        assertEquals(1, dispatches)
+        assertTrue(engine.report.value.dispatchAttempt > oldAttempt)
+    }
+
+    @Test
+    fun lateJobsAndCallbacksFromADeferredAttemptCannotTouchTheNewAttempt() {
+        arm()
+        feed()
+        now += 250
+        engine.onReading(reading()) { _, _, _ -> true }
+        val id = engine.report.value.id
+        val oldAttempt = engine.report.value.dispatchAttempt
+        engine.deferQueued(id, oldAttempt, "OCR_TOO_OLD")
+        feed()
+        now += 250
+        engine.onReading(reading()) { _, _, _ -> true }
+        val currentAttempt = engine.report.value.dispatchAttempt
+        assertFalse(
+            engine.executeGesture(id, oldAttempt) {
+                dispatches++
+                true
+            }
+        )
+        engine.gestureCompleted(id, false, oldAttempt)
+        engine.rejectQueued(id, oldAttempt, "Stale task failed")
+        assertEquals(PurchasePhase.DISPATCHED, engine.report.value.phase)
+        assertTrue(
+            engine.executeGesture(id, currentAttempt) {
+                dispatches++
+                true
+            }
+        )
+        assertEquals(1, dispatches)
+    }
+
+    @Test
+    fun deferralsCannotExtendTheOriginalReadinessDeadlineOrRepeatAcceptedGestures() {
+        arm()
+        feed()
+        now += 250
+        engine.onReading(reading()) { _, _, _ -> true }
+        val request = engine.report.value
+        engine.deferQueued(request.id, request.dispatchAttempt, "Visual frame stale")
+        now = 31_001
+        engine.tick()
+        assertEquals(PurchasePhase.FAILED, engine.report.value.phase)
+        assertEquals(0, dispatches)
+        arm()
+        feed()
+        feed()
+        assertFalse(
+            engine.deferQueued(
+                engine.report.value.id,
+                engine.report.value.dispatchAttempt,
+                "After send"
+            )
+        )
+        assertEquals(1, dispatches)
+    }
+
+    @Test
+    fun rejectedPreSendGateRetainsTheSpecificReason() {
+        arm()
+        feed()
+        now += 250
+        engine.onReading(reading()) { _, _, _ -> true }
+        engine.rejectQueued(
+            engine.report.value.id,
+            engine.report.value.dispatchAttempt,
+            "BANKNOTE_UNVERIFIED"
+        )
+        assertEquals(PurchasePhase.FAILED, engine.report.value.phase)
+        assertTrue(engine.report.value.detail.contains("BANKNOTE_UNVERIFIED"))
+        assertFalse(engine.report.value.gestureDispatched)
+    }
+
+    @Test
+    fun preparationTimeoutDefersOnlyUnsentRequests() {
+        arm()
+        feed()
+        now += 250
+        engine.onReading(reading()) { _, _, _ -> true }
+        now += 2001
+        engine.tick()
+        assertEquals(PurchasePhase.ARMED, engine.report.value.phase)
+        assertFalse(engine.report.value.gestureDispatched)
+        assertEquals(0, dispatches)
+    }
+
+    @Test
+    fun aQueuedGestureCannotStartBeyondTheOriginalArmDeadline() {
+        arm()
+        now = 30_500
+        engine.onReading(reading()) { _, _, _ -> true }
+        now = 30_750
+        engine.onReading(reading()) { _, _, _ -> true }
+        val request = engine.report.value
+        now = 31_001
+        assertFalse(
+            engine.executeGesture(request.id, request.dispatchAttempt) {
+                dispatches++
+                true
+            }
+        )
+        assertEquals(PurchasePhase.FAILED, engine.report.value.phase)
+        assertEquals(0, dispatches)
     }
 
     private fun arm() {

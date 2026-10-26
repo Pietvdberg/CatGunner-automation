@@ -10,13 +10,18 @@ data class DiagnosticState(
     val foreground: String = "Not checked",
     val lastGame: String = "No verified game sample",
     val ocr: String = "No OCR result",
-    val service: String = "No service connection observed"
+    val service: String = "No service connection observed",
+    val dispatch: String = "No dispatch check performed"
 )
 
 /** Text-only local diagnostics. No full-screen OCR, image files, or automatic export. */
 object LiveDiagnostics {
     private val mutableState = MutableStateFlow(DiagnosticState())
     val state = mutableState.asStateFlow()
+
+    fun dispatch(detail: String) {
+        mutableState.update { it.copy(dispatch = detail) }
+    }
 
     fun foreground(reason: String) {
         mutableState.update { it.copy(foreground = reason) }

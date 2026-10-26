@@ -43,7 +43,8 @@ data class PurchaseReport(
     val calibration: CalibrationProfile? = null,
     val gestureDispatched: Boolean = false,
     val verificationSamples: Int = 0,
-    val autoRunId: String? = null
+    val autoRunId: String? = null,
+    val dispatchAttempt: Long = 0
 )
 
 /** A one-use request. No retries, automatic rearming, batch taps, or callback-only success. */
@@ -53,6 +54,7 @@ class SinglePurchaseEngine(private val clock: () -> Long) {
     private var profile: CalibrationProfile? = null
     private var lease: ActionLease? = null
     private var deadline = 0L
+    private var armDeadline = 0L
     private var previous: GameReading? = null
     private var before: GameReading? = null
     private var completedAt = Long.MAX_VALUE
@@ -79,7 +81,8 @@ class SinglePurchaseEngine(private val clock: () -> Long) {
         confirmations = 0
         completedAt = Long.MAX_VALUE
         lastVerificationAt = -1
-        deadline = clock() + 30_000
+        armDeadline = clock() + 30_000
+        deadline = armDeadline
         mutableReport.value = PurchaseReport(
             UUID.randomUUID().toString(),
             PurchasePhase.ARMED,
@@ -111,6 +114,9 @@ class SinglePurchaseEngine(private val clock: () -> Long) {
                 mutableReport.value =
                     report.value.copy(detail = "Waiting, no tap attempted: $reason")
             }
+            report.value.phase == PurchasePhase.DISPATCHED && !report.value.gestureDispatched -> {
+                deferQueued(report.value.id, report.value.dispatchAttempt, reason)
+            }
             active() && report.value.gestureDispatched -> {
                 confirmations = 0
                 mutableReport.value = report.value.copy(
@@ -128,14 +134,20 @@ class SinglePurchaseEngine(private val clock: () -> Long) {
 
     /** Must wrap the actual framework call, not the job that queues it. */
     @Synchronized
-    fun executeGesture(id: String, send: () -> Boolean): Boolean {
+    fun executeGesture(
+        id: String,
+        attempt: Long = report.value.dispatchAttempt,
+        send: () -> Boolean
+    ): Boolean {
         tick()
         if (id != report.value.id ||
             report.value.phase != PurchasePhase.DISPATCHED ||
+            report.value.dispatchAttempt != attempt ||
             report.value.gestureDispatched
         ) {
             return false
         }
+        deadline = clock() + 2000
         mutableReport.value = report.value.copy(
             gestureDispatched = true,
             detail = "One tap sent; purchase not yet verified."
@@ -144,7 +156,7 @@ class SinglePurchaseEngine(private val clock: () -> Long) {
             val accepted = send()
             if (!accepted) {
                 mutableReport.value = report.value.copy(gestureDispatched = false)
-                unsafe("Android refused the gesture. No tap accepted and no retry.")
+                unsafe("Gesture service refused acceptance. No tap sent and no retry.")
             }
             accepted
         } catch (error: RuntimeException) {
@@ -152,6 +164,33 @@ class SinglePurchaseEngine(private val clock: () -> Long) {
             false
         }
     }
+
+    /** Only a still-queued, unsent attempt can wait; its original deadline is retained. */
+    @Synchronized
+    fun deferQueued(id: String, attempt: Long, reason: String): Boolean {
+        if (!isQueued(id, attempt)) return false
+        if (clock() > armDeadline) {
+            unsafe("No tap sent. Original readiness deadline expired: $reason")
+            return false
+        }
+        previous = null
+        deadline = armDeadline
+        mutableReport.value = report.value.copy(
+            phase = PurchasePhase.ARMED,
+            detail = "No tap sent; waiting for two new fresh readings: $reason"
+        )
+        return true
+    }
+
+    @Synchronized
+    fun rejectQueued(id: String, attempt: Long, reason: String) {
+        if (isQueued(id, attempt)) unsafe("No tap sent: $reason")
+    }
+
+    private fun isQueued(id: String, attempt: Long): Boolean = report.value.id == id &&
+        report.value.dispatchAttempt == attempt &&
+        report.value.phase == PurchasePhase.DISPATCHED &&
+        !report.value.gestureDispatched
 
     @Synchronized
     fun acknowledgeUnconfirmed(): Boolean {
@@ -166,6 +205,13 @@ class SinglePurchaseEngine(private val clock: () -> Long) {
     @Synchronized
     fun tick() {
         if (active() && clock() > deadline) {
+            if (report.value.phase == PurchasePhase.DISPATCHED &&
+                !report.value.gestureDispatched &&
+                clock() <= armDeadline
+            ) {
+                deferQueued(report.value.id, report.value.dispatchAttempt, "Preparation timed out.")
+                return
+            }
             val lastStage = report.value.detail.take(400)
             finish(
                 PurchasePhase.FAILED,
@@ -220,9 +266,10 @@ class SinglePurchaseEngine(private val clock: () -> Long) {
                 mutableReport.value = current.copy(
                     phase = PurchasePhase.DISPATCHED,
                     before = target,
+                    dispatchAttempt = current.dispatchAttempt + 1,
                     detail = "One gesture request pending; purchase is not verified."
                 )
-                deadline = clock() + 2000
+                deadline = minOf(clock() + 2000, armDeadline)
                 if (!dispatch(current.id, lease!!, calibration.targets.getValue(kind))) {
                     unsafe("Gesture refused. No retry.")
                 }
@@ -233,9 +280,18 @@ class SinglePurchaseEngine(private val clock: () -> Long) {
     }
 
     @Synchronized
-    fun gestureCompleted(id: String, succeeded: Boolean) {
+    fun gestureCompleted(
+        id: String,
+        succeeded: Boolean,
+        attempt: Long = report.value.dispatchAttempt
+    ) {
         tick()
-        if (id != report.value.id || report.value.phase != PurchasePhase.DISPATCHED) return
+        if (id != report.value.id ||
+            report.value.phase != PurchasePhase.DISPATCHED ||
+            attempt != report.value.dispatchAttempt
+        ) {
+            return
+        }
         if (!succeeded) {
             unsafe("Gesture cancelled or rejected. No retry.")
             return

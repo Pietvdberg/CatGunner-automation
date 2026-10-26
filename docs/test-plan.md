@@ -131,3 +131,21 @@ phone-validation.md. For the first new run choose cap 3 and Rotate. Verify:
 Unit tests exercise a complete capped run through the real one-purchase engine,
 rotation, price comparison, no implicit startup, callback/verification sequencing,
 lease changes, unconfirmed stops, profile mismatch, timeout and run correlation.
+
+## 0.4.1 preparation deferral and foreground outcomes
+
+- Inject an expired OCR/frame or transient label miss after a request is queued
+  but before send. It must wait for two new readings, never tap stale content,
+  and never extend the original readiness deadline.
+- Complete an old job or callback after a newer preparation token is issued. It
+  must neither dispatch nor cancel the newer attempt.
+- Real Android refusal, currency mismatch, profile/target changes, foreground
+  loss and pause/stop remain hard blocks. A sent gesture never re-enters the
+  pre-send preparation path.
+- Diagnostics must distinguish receipt failure, each last-gate reason, service
+  acceptance and actual Android callback. A missing send must not be mislabeled
+  as an Android callback cancellation.
+- Keep the game visible until the complete/stopped outcome alert. Inspecting
+  AutoPilot or the notification shade earlier still stops the run. Verify alerts
+  under the phone's actual notification settings; no sound/banner is guaranteed
+  when the user has muted the channel or enabled Do Not Disturb.

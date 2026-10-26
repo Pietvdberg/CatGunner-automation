@@ -1,18 +1,18 @@
 # CatGunner AutoPilot
 
 Private, on-device Android assistant for Idle Cat Gunner (`com.Chodun.CatGunner`).
-Version 0.4.0 adds **bounded automatic purchasing** on top of the phone-validated
+Version 0.4.1 adds **bounded automatic purchasing** on top of the phone-validated
 single-purchase engine. Each run has a 1/3/5-purchase cap, with one verified action
 at a time. Expected-gain optimization and Rebirth Rush remain future milestones. Green banknotes
 are the only permitted currency; gems, unknown currencies and real money are forbidden.
 
 ## Download on your phone or computer
 
-- **[Download Pixel 10 APK (17.2 MB)](https://github.com/Pietvdberg/CatGunner-automation/raw/refs/tags/v0.4.0/downloads/AutoPilot-Pixel10-0.4.0.apk)**
-- **[Download ZIP with APK and USB-install instructions (9.5 MB)](https://github.com/Pietvdberg/CatGunner-automation/raw/refs/tags/v0.4.0/downloads/AutoPilot-Pixel10-download.zip)**
+- **[Download Pixel 10 APK (17.2 MB)](https://github.com/Pietvdberg/CatGunner-automation/raw/refs/tags/v0.4.1/downloads/AutoPilot-Pixel10-0.4.1.apk)**
+- **[Download ZIP with APK and USB-install instructions (9.5 MB)](https://github.com/Pietvdberg/CatGunner-automation/raw/refs/tags/v0.4.1/downloads/AutoPilot-Pixel10-download.zip)**
 - [View installation instructions](downloads/INSTALL.txt) and [SHA-256 checksums](downloads/SHA256SUMS).
 
-These are signed 0.4.0 builds. Hosting on GitHub fixes
+These are signed 0.4.1 builds. Hosting on GitHub fixes
 file access; it does not remove Play Protect's installation block. A work computer
 can download the files without installing software. USB/ADB installation requires
 a computer on which you are allowed to run Android Platform-Tools.
@@ -65,7 +65,11 @@ mode still needs phone validation. Existing calibration is retained.
    run across available controls, or **Lowest comparable displayed price**.
 3. Press **Start bounded automatic run**. The app opens the game. Keep its normal
    upgrade bar visible while the run finishes; do not manually buy upgrades.
-4. Every purchase must reach VERIFIED before the next can be armed. The run ends
+4. Keep the game visible until the **Automatic run complete** or **Automatic run
+   stopped** outcome notification appears (notification alerts must be enabled).
+   Opening AutoPilot or the notification shade before completion interrupts the
+   foreground-only run; do not use a fixed 30-second wait as a completion signal.
+   Every purchase must reach VERIFIED before the next can be armed. The run ends
    at its cap or earlier on a failure, unconfirmed action, lack of eligible targets,
    incompatible units, game interruption, or readiness timeout. It never retries
    a failed action. The status shows verified progress against the cap.
@@ -165,3 +169,20 @@ a tap. Losing foreground/accessibility, pause or stop ends an unverified sent
 action as UNCONFIRMED. Only user review permits a new test, without marking the
 prior purchase automatically verified. The app records whether the actual gesture
 call was attempted/accepted separately from the queued request.
+
+## 0.4.1 pre-send preparation and outcome alerts
+
+A queued request is not an actual tap. A temporary stale OCR/frame or label miss
+before any send now returns to waiting for two new fresh readings within the
+original readiness deadline. Every preparation has a token, so a late task or
+callback from an older preparation cannot execute or cancel the newer one. An
+actual accepted tap cannot return to this pre-send waiting path. Refusal, currency
+mismatch, changed calibration, missing foreground and session changes still stop
+the request. There is no retry of a rejected or possibly accepted gesture.
+
+Copy diagnostics now includes the exact final dispatch reason, ages, target and
+banknote check. Receipt-storage failures and actual gesture callbacks are logged
+separately. Foreground stops retain the observed status instead of only a generic
+message. A separate outcome notification alerts only after a run completes or
+stops, so you can keep the game visible while it is active. Android notification
+settings and Do Not Disturb can silence alerts.

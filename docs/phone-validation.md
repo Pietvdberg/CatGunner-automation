@@ -27,3 +27,18 @@ This establishes the one-purchase baseline for this layout. Interruption testing
 unavailable Speed/Money layouts, custom dialogs, sustained operation and any
 new bounded-run mode need separate validation. It does not validate rebirth
 recognition, suffix scales, expected upgrade benefit or strategy optimality.
+
+## Owner testing of 0.4.0 bounded runs
+
+- A lowest-comparable-price run reached 2/3 verified, then stopped on foreground
+  loss (135665.jpg). This image was captured while AutoPilot was visible; it
+  does not establish whether inspection caused the stop or another window event
+  occurred first. The foreground-only rule remains enforced.
+- A rotation run reached 1/5 verified, then reported FAILED with no tap sent for
+  the next request (135666.jpg). Its generic cancellation text came from a
+  pre-send failure path, not an accepted gesture callback. Existing diagnostics
+  do not establish which exact gate failed.
+
+0.4.1 adds explicit final-gate reasons and pre-send deferral for transient stale
+frames/layouts, plus outcome notifications to avoid interrupting a run to inspect
+it. It still needs phone validation; a completed cap-sized run is not yet proven.
