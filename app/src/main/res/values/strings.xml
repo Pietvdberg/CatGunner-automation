@@ -1,6 +1,6 @@
 <resources>
     <string name="app_name">CatGunner AutoPilot</string>
-    <string name="intro">AutoPilot 0.3.3 — Single-purchase test build\n1. Enable the AutoPilot accessibility service.\n2. Start capture, open the game and wait for its upgrade bar.\n3. Return here and calibrate the three green-banknote controls.\n4. Resume capture, then choose ONE purchase test.\nAutomatic buying and Rebirth Rush are not enabled.</string>
+    <string name="intro">AutoPilot 0.4.0 — Bounded automatic purchases\n1. Enable the AutoPilot accessibility service.\n2. Start capture, open the game and wait for its upgrade bar.\n3. Return here and calibrate the three green-banknote controls.\n4. Resume capture, then choose ONE purchase test.\nBounded automatic runs are optional and off until started. Rebirth Rush is not enabled.</string>
     <string name="start">Start screen capture</string>
     <string name="pause">Pause</string>
     <string name="resume">Resume</string>
@@ -66,4 +66,19 @@
     <string name="review_outcome">I checked the game — allow a NEW purchase test</string>
     <string name="tap_possible">Yes</string>
     <string name="tap_none">No</string>
+    <string name="auto_intro">Bounded automatic run: one purchase at a time, each verified before the next. Green banknotes only. Any unconfirmed or failed purchase stops the run. Pause/Stop or returning here ends the run; Resume only resumes observation.</string>
+    <string name="auto_cap_label">Maximum purchases this run</string>
+    <string name="auto_rule_label">Selection rule — price units must match for comparisons</string>
+    <string name="auto_start">Start bounded automatic run</string>
+    <string name="auto_stop">Stop automatic run</string>
+    <string name="auto_status">Auto: %1$s · verified: %2$d/%3$d\n%4$s</string>
+    <string-array name="auto_caps">
+        <item>1 purchase</item>
+        <item>3 purchases</item>
+        <item>5 purchases</item>
+    </string-array>
+    <string-array name="auto_rules">
+        <item>Lowest comparable displayed price</item>
+        <item>Rotate Power → Speed → Money</item>
+    </string-array>
 </resources>

@@ -14,6 +14,7 @@ object SessionCommands {
 
     fun pause() {
         AutoPilotSession.controller.pause()
+        PurchaseRuntime.autoRunner.stop("Paused. Start a new run explicitly.")
         PurchaseRuntime.engine.cancel("Paused. An already-dispatched gesture may finish.")
     }
 
@@ -23,6 +24,7 @@ object SessionCommands {
     @SuppressLint("ImplicitSamInstance")
     fun stop(context: Context) {
         AutoPilotSession.controller.stop()
+        PurchaseRuntime.autoRunner.stop("Stopped. No automatic resume.")
         PurchaseRuntime.engine.cancel("Stopped. An already-dispatched gesture may finish.")
         context.stopService(Intent(context, CaptureService::class.java))
     }

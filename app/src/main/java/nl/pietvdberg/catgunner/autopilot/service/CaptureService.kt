@@ -39,6 +39,7 @@ import nl.pietvdberg.catgunner.autopilot.domain.purchase.PurchasePhase
 import nl.pietvdberg.catgunner.autopilot.domain.state.AutoPilotSession
 import nl.pietvdberg.catgunner.autopilot.domain.state.SessionMode
 import nl.pietvdberg.catgunner.autopilot.domain.state.SessionState
+import nl.pietvdberg.catgunner.autopilot.domain.strategy.AutoRunPhase
 import nl.pietvdberg.catgunner.autopilot.tiles.AutoPilotTileService
 import nl.pietvdberg.catgunner.autopilot.ui.MainActivity
 
@@ -94,6 +95,7 @@ class CaptureService : Service() {
         scope.launch {
             while (true) {
                 PurchaseRuntime.engine.tick()
+                PurchaseRuntime.autoRunner.tick(controller.observationLease())
                 delay(250)
             }
         }
@@ -101,8 +103,9 @@ class CaptureService : Service() {
         scope.launch {
             combine(
                 controller.state.map { it.mode }.distinctUntilChanged(),
-                PurchaseRuntime.engine.report
-            ) { mode, report -> mode to report }.collect {
+                PurchaseRuntime.engine.report,
+                PurchaseRuntime.autoRunner.report
+            ) { mode, report, run -> Triple(mode, report, run) }.collect {
                 val state = controller.state.value
                 val notificationsAllowed = Build.VERSION.SDK_INT < 33 ||
                     checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) ==
@@ -210,6 +213,7 @@ class CaptureService : Service() {
     private fun notification(state: SessionState): Notification {
         val running = state.mode == SessionMode.OBSERVING
         val report = PurchaseRuntime.engine.report.value
+        val run = PurchaseRuntime.autoRunner.report.value
         val openApp = PendingIntent.getActivity(
             this,
             0,
@@ -220,7 +224,16 @@ class CaptureService : Service() {
             .setSmallIcon(R.drawable.ic_autopilot)
             .setContentTitle(getString(R.string.notification_title))
             .setContentText(
-                if (report.phase == PurchasePhase.IDLE) {
+                if (run.active) {
+                    "Auto ${run.verified}/${run.limit} · " +
+                        if (run.phase ==
+                            AutoRunPhase.WAITING
+                        ) {
+                            run.detail
+                        } else {
+                            report.detail
+                        }
+                } else if (report.phase == PurchasePhase.IDLE) {
                     getString(
                         if (running) {
                             R.string.notification_observing

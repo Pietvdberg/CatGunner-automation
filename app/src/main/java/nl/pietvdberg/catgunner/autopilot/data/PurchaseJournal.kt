@@ -33,6 +33,7 @@ class PurchaseJournal(context: Context) {
         val point = report.kind?.let { report.calibration?.targets?.get(it) }
         retained.put(
             JSONObject().put("id", report.id).put("phase", report.phase.name)
+                .put("autoRunId", report.autoRunId)
                 .put("gestureDispatched", report.gestureDispatched)
                 .put("verificationSamples", report.verificationSamples)
                 .put("upgrade", report.kind?.name).put("detail", report.detail)

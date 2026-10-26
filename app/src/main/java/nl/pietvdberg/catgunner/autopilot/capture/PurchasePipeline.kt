@@ -23,6 +23,7 @@ import nl.pietvdberg.catgunner.autopilot.domain.state.AutoPilotSession
 import nl.pietvdberg.catgunner.autopilot.vision.AvailabilityAppearance
 import nl.pietvdberg.catgunner.autopilot.vision.BanknoteMatcher
 import nl.pietvdberg.catgunner.autopilot.vision.PixelSource
+import nl.pietvdberg.catgunner.autopilot.vision.UpgradeKind
 import nl.pietvdberg.catgunner.autopilot.vision.UpgradeOcr
 import nl.pietvdberg.catgunner.autopilot.vision.UpgradePanelDetector
 
@@ -41,7 +42,7 @@ class PurchasePipeline(private val context: Context) : AutoCloseable {
     private val engine = PurchaseRuntime.engine
     private var lastRecognizedAt = -1L
     private var closed = false
-    private var latestBanknoteMatched = false
+    private var latestBanknoteMatches: Map<UpgradeKind, Boolean> = emptyMap()
 
     fun sample(pixels: PixelSource, generation: Long, capturedAt: Long) {
         if (closed) return
@@ -69,9 +70,9 @@ class PurchasePipeline(private val context: Context) : AutoCloseable {
         val actionLease = controller.observationLease() ?: return
         val nativeWidth = pixels.width
         val nativeHeight = pixels.height
-        val kind = engine.report.value.kind
-        val matchedBanknote = kind != null && banknote.matches(pixels, kind)
-        latestBanknoteMatched = matchedBanknote
+        val banknoteMatches = UpgradeKind.entries
+            .associateWith { banknote.matches(pixels, it) }
+        latestBanknoteMatches = banknoteMatches
         ocr.sample(pixels, evidence) { result ->
             val ageMillis = SystemClock.elapsedRealtime() - capturedAt
             LiveDiagnostics.ocr("Result age (ms): $ageMillis. ${result.detail}")
@@ -94,15 +95,18 @@ class PurchasePipeline(private val context: Context) : AutoCloseable {
                 engine.waitForEvidence("OCR frame is stale; waiting for a fresh reading.")
                 return@sample
             }
-            val reading = GameReading(
+            val candidate = GameReading(
                 capturedAt,
                 nativeWidth,
                 nativeHeight,
                 version,
                 upgrades,
-                matchedBanknote,
+                false,
                 true
             )
+            PurchaseRuntime.autoRunner.prepare(candidate, controller.observationLease())
+            val kind = engine.report.value.kind
+            val reading = candidate.copy(banknoteIconsMatched = banknoteMatches[kind] == true)
             ReadingStore.update(reading)
             engine.onReading(reading) { id, lease, point ->
                 val request = engine.report.value
@@ -124,7 +128,7 @@ class PurchasePipeline(private val context: Context) : AutoCloseable {
                             engine.report.value.phase != PurchasePhase.DISPATCHED ||
                             SystemClock.elapsedRealtime() - capturedAt !in 0..750 ||
                             !fresh ||
-                            !latestBanknoteMatched ||
+                            latestBanknoteMatches[kind] != true ||
                             current?.recognized != true ||
                             current.upgrades.firstOrNull { it.kind == kind }?.availability !=
                             AvailabilityAppearance.AVAILABLE ||
@@ -151,10 +155,12 @@ class PurchasePipeline(private val context: Context) : AutoCloseable {
                 }
                 true
             }
+            PurchaseRuntime.autoRunner.reconcile()
         }
     }
 
     private fun foregroundLost(reason: String) {
+        PurchaseRuntime.autoRunner.foregroundLost()
         if (engine.report.value.phase == PurchasePhase.ARMED) {
             engine.waitForEvidence(reason)
         } else {
@@ -164,6 +170,7 @@ class PurchasePipeline(private val context: Context) : AutoCloseable {
 
     override fun close() {
         closed = true
+        PurchaseRuntime.autoRunner.stop("Capture ended. No automatic resume.")
         scope.cancel()
         ocr.close()
         engine.cancel("Capture ended. Any dispatched gesture may finish; inspect the game.")

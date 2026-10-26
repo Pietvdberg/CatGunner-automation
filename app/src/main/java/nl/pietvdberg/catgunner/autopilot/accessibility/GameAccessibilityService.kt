@@ -28,7 +28,9 @@ class GameAccessibilityService : AccessibilityService() {
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         if (instance !== this) return
-        if (!isGameForeground() &&
+        val foreground = isGameForeground()
+        if (!foreground) PurchaseRuntime.autoRunner.foregroundLost()
+        if (!foreground &&
             PurchaseRuntime.engine.report.value.phase in setOf(
                 PurchasePhase.DISPATCHED,
                 PurchasePhase.VERIFYING
@@ -100,12 +102,14 @@ class GameAccessibilityService : AccessibilityService() {
 
     override fun onInterrupt() {
         if (instance !== this) return
+        PurchaseRuntime.autoRunner.stop("Accessibility interrupted. No automatic resume.")
         LiveDiagnostics.service("Android interrupted accessibility feedback")
         PurchaseRuntime.engine.unsafe("Accessibility was interrupted.")
     }
 
     override fun onUnbind(intent: android.content.Intent?): Boolean {
         if (connections.disconnect(this)) {
+            PurchaseRuntime.autoRunner.stop("Accessibility disconnected. No automatic resume.")
             LiveDiagnostics.service("Android unbound the service; check its accessibility setting")
             PurchaseRuntime.engine.unsafe("Accessibility service disconnected.")
         }
@@ -114,6 +118,7 @@ class GameAccessibilityService : AccessibilityService() {
 
     override fun onDestroy() {
         if (connections.disconnect(this)) {
+            PurchaseRuntime.autoRunner.stop("Accessibility service stopped. No automatic resume.")
             LiveDiagnostics.service("Android destroyed the accessibility service")
             PurchaseRuntime.engine.unsafe("Accessibility service stopped.")
         }

@@ -42,7 +42,8 @@ data class PurchaseReport(
     val after: UpgradeReading? = null,
     val calibration: CalibrationProfile? = null,
     val gestureDispatched: Boolean = false,
-    val verificationSamples: Int = 0
+    val verificationSamples: Int = 0,
+    val autoRunId: String? = null
 )
 
 /** A one-use request. No retries, automatic rearming, batch taps, or callback-only success. */
@@ -59,7 +60,12 @@ class SinglePurchaseEngine(private val clock: () -> Long) {
     private var confirmations = 0
 
     @Synchronized
-    fun arm(kind: UpgradeKind, calibration: CalibrationProfile, actionLease: ActionLease): Boolean {
+    fun arm(
+        kind: UpgradeKind,
+        calibration: CalibrationProfile,
+        actionLease: ActionLease,
+        autoRunId: String? = null
+    ): Boolean {
         if (active() ||
             report.value.phase == PurchasePhase.UNCONFIRMED ||
             !calibration.isValid()
@@ -79,7 +85,8 @@ class SinglePurchaseEngine(private val clock: () -> Long) {
             PurchasePhase.ARMED,
             kind,
             "Armed for one tap. Switch to the game within 30 seconds.",
-            calibration = profile
+            calibration = profile,
+            autoRunId = autoRunId
         )
         return true
     }

@@ -1,17 +1,18 @@
 # CatGunner AutoPilot
 
 Private, on-device Android assistant for Idle Cat Gunner (`com.Chodun.CatGunner`).
-Version 0.3.3 implements calibration and an explicitly armed **single-purchase
-test**. Adaptive buying and Rebirth Rush remain future milestones. Green banknotes
+Version 0.4.0 adds **bounded automatic purchasing** on top of the phone-validated
+single-purchase engine. Each run has a 1/3/5-purchase cap, with one verified action
+at a time. Expected-gain optimization and Rebirth Rush remain future milestones. Green banknotes
 are the only permitted currency; gems, unknown currencies and real money are forbidden.
 
 ## Download on your phone or computer
 
-- **[Download Pixel 10 APK (16.8 MB)](https://github.com/Pietvdberg/CatGunner-automation/raw/refs/tags/v0.3.3/downloads/AutoPilot-Pixel10-0.3.3.apk)**
-- **[Download ZIP with APK and USB-install instructions (9.4 MB)](https://github.com/Pietvdberg/CatGunner-automation/raw/refs/tags/v0.3.3/downloads/AutoPilot-Pixel10-download.zip)**
+- **[Download Pixel 10 APK (17.2 MB)](https://github.com/Pietvdberg/CatGunner-automation/raw/refs/tags/v0.4.0/downloads/AutoPilot-Pixel10-0.4.0.apk)**
+- **[Download ZIP with APK and USB-install instructions (9.5 MB)](https://github.com/Pietvdberg/CatGunner-automation/raw/refs/tags/v0.4.0/downloads/AutoPilot-Pixel10-download.zip)**
 - [View installation instructions](downloads/INSTALL.txt) and [SHA-256 checksums](downloads/SHA256SUMS).
 
-These are signed 0.3.3 builds. Hosting on GitHub fixes
+These are signed 0.4.0 builds. Hosting on GitHub fixes
 file access; it does not remove Play Protect's installation block. A work computer
 can download the files without installing software. USB/ADB installation requires
 a computer on which you are allowed to run Android Platform-Tools.
@@ -52,6 +53,33 @@ The accessibility and screen-capture grants must be completed on the phone throu
 Android; the app cannot grant them itself. Allow notifications for the status and
 Pause/Stop actions, or use the in-app and Quick Settings controls.
 
+## Bounded automatic run (0.4.0)
+
+The owner validated single purchases for Power, Speed and Money with VERIFIED 2/2
+outcomes on Pixel 10; see [phone evidence](docs/phone-validation.md). The new run
+mode still needs phone validation. Existing calibration is retained.
+
+1. Enable accessibility, start/resume capture and leave your calibration in place.
+2. In **Bounded automatic run**, choose a maximum of **1, 3 or 5 purchases**. The
+   default is 3. Choose **Rotate Power → Speed → Money** for a first deterministic
+   run across available controls, or **Lowest comparable displayed price**.
+3. Press **Start bounded automatic run**. The app opens the game. Keep its normal
+   upgrade bar visible while the run finishes; do not manually buy upgrades.
+4. Every purchase must reach VERIFIED before the next can be armed. The run ends
+   at its cap or earlier on a failure, unconfirmed action, lack of eligible targets,
+   incompatible units, game interruption, or readiness timeout. It never retries
+   a failed action. The status shows verified progress against the cap.
+5. Pause/Stop, accessibility loss or returning to AutoPilot stops the run. Resume
+   only resumes observation; starting another run always needs its own button press.
+   An unconfirmed tap still requires game review before any new purchase can arm.
+
+The lowest-price rule compares exact decimal values **only when suffixes match**.
+It stops on mixed or case-different suffixes because their scales are unverified.
+Rotation avoids price comparisons and skips unavailable controls. These are
+transparent baseline rules, not learned DPS or longer-horizon optimizers. There
+is no currency-amount budget/reserve policy yet; the hard bound is purchase count.
+No run or pending purchase automatically restores after process death.
+
 ## Build
 
 Use JDK 17 or 21, Android SDK Platform 36, Build Tools 35.0.0 and the checked-in
@@ -73,8 +101,8 @@ No release signing key is stored in the repository.
 ## Current limits
 
 The owner confirmed capture startup and its notification on the Pixel 10 running
-Android 16. The new calibration, OCR and real-game purchase path still require
-physical-device validation. The experimental screenshot profile recognizes two
+Android 16. The owner has validated single purchases for all three upgrades. The new bounded
+run and interruption paths still require physical-device validation. The experimental screenshot profile recognizes two
 supplied examples; it is not a complete classifier for every in-game dialog.
 Unknown controls or OCR failures stop a test. Native/system dialogs, app switching,
 lock and competing windows are guarded; custom game-drawn dialogs require further

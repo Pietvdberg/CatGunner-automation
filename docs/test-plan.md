@@ -110,3 +110,24 @@ rejected. On the phone verify both raw and parsed levels before confirming succe
 - UNCONFIRMED blocks new tests until game review. Review itself never taps or marks
   the old purchase VERIFIED. After a real test keep the game visible about ten
   seconds before returning to AutoPilot so verification can finish.
+
+## 0.4.0 bounded run validation
+
+The single-purchase baseline is validated by the owner's three screenshots; see
+phone-validation.md. For the first new run choose cap 3 and Rotate. Verify:
+
+- Exactly one request proceeds at a time and the next is not armed before VERIFIED.
+- At most three taps occur; COMPLETE shows 3/3 when all succeed. More observations
+  after completion cannot restart the run. An unavailable control may be skipped.
+- Lowest-price selection chooses the minimum only for equal suffixes and stops
+  on mixed units. Rotation explicitly does not compare their magnitude.
+- Stop/Pause, returning to AutoPilot, disabling accessibility or leaving the game
+  ends the run. Resume/Quick Settings must not resume automatic purchases.
+- UNKNOWN preconditions continue to block taps. FAILED/UNCONFIRMED stops the whole
+  run with no retry; an unconfirmed action still blocks a new run until review.
+- A manual single-purchase result from before a run never counts toward its cap.
+- Restarting the process returns to automatic purchasing off; no job restores.
+
+Unit tests exercise a complete capped run through the real one-purchase engine,
+rotation, price comparison, no implicit startup, callback/verification sequencing,
+lease changes, unconfirmed stops, profile mismatch, timeout and run correlation.

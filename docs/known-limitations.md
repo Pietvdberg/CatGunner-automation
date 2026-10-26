@@ -1,51 +1,39 @@
 # Known limitations
 
-Version 0.3.3 is a calibrated single-purchase test build, not the autonomous MVP.
-The owner confirmed capture startup and notification display on a Pixel 10 running
-Android 16. New calibration, native OCR accuracy, accessibility dispatch and
-post-purchase verification remain untested on the physical phone.
+Version 0.4.0 is a bounded automatic-purchase prototype, not the complete MVP.
+The owner validated Power, Speed and Money single purchases on Pixel 10 / Android
+16 at 1080×2424, each showing VERIFIED 2/2. See phone-validation.md. The new run
+orchestration is cloud tested but still needs handset validation.
 
-The two screenshots support Power/Speed/Money available and Power unavailable.
-Disabled Speed/Money, rebirth, dialogs, loading states and native-resolution
-captures need more coverage. The screenshot-derived classifier is incomplete:
-custom dialogs entirely outside its visual regions may not be recognized.
-The app refuses unknown regions, failed OCR, unverified icons, changed layouts,
-non-game foreground, competing native windows, lock and stale evidence. These
-checks do not establish comprehensive game-screen understanding. Unattended
-purchasing, loops and batches are not enabled.
+Automatic runs require an explicit start and cap at five actions, default three.
+Each prior action must verify before another can be armed. Lowest-price selection
+only compares exact decimals with identical suffixes. Rotation does not compare
+price magnitude. Neither rule estimates expected progress gain, opportunity cost,
+income or DPS. Reserve/spend-amount policies and unknown suffix scales are not
+implemented. Expected-gain optimization and Rebirth Rush remain future milestones.
 
-OCR requires exact numeric level notation and strict cost text; it does not guess
-ambiguous characters or convert suffixes to numeric currency magnitudes. Cold OCR
-startup or processing delays can fail freshness checks. Such failures never retry.
-A cancelled, rejected or unverified tap may still have changed the game: inspect
-it before manually arming another test. There is no purchase rollback.
+Unavailable Speed/Money, rebirth, dialogs, loading states and native captures need
+more corpus coverage. The screenshot-derived classifier is incomplete: custom
+in-game dialogs entirely outside its visual regions may go unnoticed. Unknown
+controls/OCR and stale frames block dispatch; native competing windows, loss of
+foreground/accessibility, pause and stop end a run. This is not evidence of
+comprehensive game-screen understanding or readiness for unattended operation.
 
-A retained preview survives app switching and pause for inspection. It is historical
-and never an action precondition. Only geometry and bounded receipts are saved;
-process death loses previews and pending requests. Device/game changes invalidate
-calibration. Capture tokens are never reused after stopping.
+OCR does not reconstruct unreadable digits. It accepts the observed period-as-o
+separator only after the fixed Lv prefix. After a tap, invalid frames can wait
+within an eight-second verification window, without another gesture. Two distinct
+post-completion readings must show exactly one selected level increase with
+matching cost text and unchanged other upgrade levels. A callback alone is never
+purchase success. UNCONFIRMED means a purchase may already have occurred; review
+the game before any new test or run. There is no rollback.
 
-Gems, unknown currency and real money remain forbidden. The bundled model operates
-locally, and network permissions are explicitly removed from the merged manifest.
-No performance, battery, thermal, or rebirth-recovery claims have been established.
+A retained historical preview survives app switching and pause for inspection;
+it is never an action precondition. Only geometry and bounded receipts are saved.
+Process death loses preview, pending run state and its in-process review gate.
+No request resumes automatically. Device/game changes invalidate calibration.
+Capture tokens require renewed Android consent after stopping.
 
-Owner testing of 0.3.0 recognized all three controls at 1080×2424, but a test failed
-on an unknown frame and the service later appeared unavailable. The launch-time
-immediate-failure path and stale-service teardown are corrected in 0.3.1. The
-provided screenshot does not establish why Android disconnected the service or
-whether native OCR is parsing successfully; new diagnostics expose those facts.
-These changes are unit/build validated, not yet validated on the owner's phone.
-
-Owner testing of 0.3.1 confirms that accessibility stays connected and the native
-layout can match at 98%, but raw level prefixes `Lvo166`/`Lvo167` were rejected,
-causing a readiness timeout. 0.3.2 accepts this observed separator variant only;
-it does not correct numeric letters or loosen freshness/currency guards. Successful
-purchase verification on the physical phone is still not established.
-
-Owner testing of 0.3.2 confirms visible upgrade effects, with later native OCR
-showing Power 168 and 169, despite app FAILED reports from temporary label/OCR
-loss. Actual gesture delivery works on the phone. The 0.3.3 verification changes
-are covered by regression tests but have not yet been phone-validated. Numeric
-strings such as `Lva68` remain ambiguous and are discarded. UNCONFIRMED means a
-purchase may already have occurred; reviewing the game does not establish
-automatic verification. New tests are blocked pending explicit review in-process.
+Green banknotes only. Gems, unknown currencies and real money remain forbidden.
+The bundled OCR model runs locally, and network permissions are removed from the
+merged manifest. No sustained-session, battery/thermal, action-latency percentile
+or rebirth-recovery performance claims have been established.

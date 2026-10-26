@@ -1,41 +1,36 @@
-CatGunner AutoPilot 0.3.3 — Pixel 10 development installation
+CatGunner AutoPilot 0.4.0 — Pixel 10 / Android 16
 
-This archive contains the signed arm64 APK and these instructions.
-The APK is the same file previously provided, not a Play Protect fix.
+The APK is signed with the same development certificate as previous versions.
+It includes offline OCR. It does not disable or bypass Play Protect.
 
-1. Extract this ZIP on your computer.
-2. Get Google's Android SDK Platform-Tools for your operating system:
-   https://developer.android.com/tools/releases/platform-tools
-3. On the phone, enable Developer options and USB debugging in Android settings.
-4. Connect the phone by USB and accept its debugging authorization prompt.
-5. Open a terminal in the platform-tools folder. Use adb devices to confirm access.
-   Windows PowerShell: .\adb.exe devices
-   macOS/Linux: ./adb devices
-6. Install the extracted APK using its actual path:
-   Windows PowerShell: .\adb.exe install -r "C:\path\to\AutoPilot-Pixel10-0.3.3.apk"
-   macOS/Linux: ./adb install -r "/path/to/AutoPilot-Pixel10-0.3.3.apk"
-7. Keep Play Protect enabled. If installation is still blocked, report the actual
-   installer/ADB error; do not alter the APK to disguise its capabilities.
-8. Disable USB debugging after installation if it is no longer needed.
+Ubuntu update (using the Platform-Tools folder from the previous installation):
+  cd ~/Downloads
+  ./platform-tools/adb devices
+  ./platform-tools/adb install -r ~/Downloads/AutoPilot-Pixel10-0.4.0.apk
 
-After installation, use the in-app setup instructions. Android accessibility and
-screen-capture grants must be completed on the handset. The computer is not
-needed during normal app use. This is a single-purchase test build; physical OCR
-and purchase verification still require testing. Only green banknotes are allowed.
-Gems, unknown currency and real-money purchases are forbidden.
+Connect the unlocked phone over USB with USB debugging enabled; accept the
+phone's debugging prompt. Keep Play Protect enabled. If ADB reports an error,
+copy its exact output. Do not install developer tools on a work computer where
+running them is not permitted. USB is not required during normal app use.
 
-Version 0.3.3: calibration is retained. Check that accessibility says Connected.
-If it says Enabled but disconnected, toggle AutoPilot off and back on in Android
-accessibility settings. Run one new test. If it fails, press Copy test diagnostics
-and paste the text into the chat. No diagnostics are uploaded automatically.
+Calibration is retained. Enable accessibility until AutoPilot says Connected,
+then start/resume user-consented capture. Manual single-purchase tests still work.
 
-0.3.3 accepts the observed Lvo166/Lvo167 fixed-prefix OCR separator without
-substituting any numeric digits. Existing calibration is retained. Timeout
-details now include the last blocking stage. Copy diagnostics if a test fails.
+NEW: Bounded automatic run
+- Choose a cap of 1, 3 or 5 purchases (default 3).
+- For a first deterministic check, choose Rotate Power / Speed / Money.
+- Start the bounded run; the app opens the game. Keep its upgrade bar visible.
+- Every purchase must be VERIFIED before another request can be armed.
+- The run stops at its cap, or earlier on failure/uncertainty/interruption.
+- Pause/Stop or returning to AutoPilot stops the run. Resume only resumes
+  observation; it never starts automatic purchases.
+- UNCONFIRMED means a purchase may already have occurred: inspect the game and
+  use the review button before arming another test or starting another run.
+- Lowest comparable price only ranks exact amounts with identical suffixes;
+  differing suffixes stop that rule because their scales are not established.
+- Rotation does not compare prices. No expected-DPS or rebirth optimizer exists yet.
 
-0.3.3: one actual tap may succeed even if a later frame cannot be verified.
-Keep the game visible for about ten seconds after the tap. The verifier gets a
-fixed eight-second window without another gesture. VERIFIED still requires two
-matching post-completion level increases. UNCONFIRMED means a purchase may have
-happened: inspect the game and use its explicit review button before any new test.
-Never repeat a test solely because the purchase could not be verified.
+The owner validated single purchases for all three controls with VERIFIED 2/2.
+The new bounded-run layer is cloud tested and still requires phone validation.
+Green banknotes only; gems, unknown currency and real money remain forbidden.
+Use Copy test diagnostics if a run stops unexpectedly; no data uploads automatically.

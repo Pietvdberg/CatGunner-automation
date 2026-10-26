@@ -124,3 +124,21 @@ Pre-tap age remains 750 ms; post-tap observation allowance is two seconds and
 can never authorize any gesture.
 
 APK SHA-256: `68b09d8764f2f8beb41ff13155d90e0f387a93a89163cdbdfce71990706ddbe6`.
+
+## 0.4.0 bounded automatic purchasing
+
+Ran `tools/cloud-gradle.sh -PsplitApks assembleDebug testDebugUnitTest lintDebug
+ktlintCheck`: all passed. 112 tests executed with zero failures/errors/skips.
+New selector tests cover observed decimal prices, matching suffix requirements,
+incomplete/unaffordable input and explicit rotation. Orchestration tests use the
+real single-purchase engine to verify cap enforcement, request correlation, no
+implicit startup, no next action before verification, no double-counting, prior
+manual-result exclusion, unconfirmed/failure stops, profile/lease changes, missing
+readiness timeout, foreground loss and accurate counts during stop.
+
+The owner has validated all three one-purchase controls with VERIFIED 2/2 phone
+screenshots; see phone-validation.md. The new orchestration layer still requires
+handset validation. No expected-gain optimization, suffix-scale inference, reserve
+policy, fast batch or Rebirth Rush performance is claimed.
+
+APK SHA-256: `52bfb68a4e926aca473ba3040b50555770d038e1969be16723e58d8401e163b2`.

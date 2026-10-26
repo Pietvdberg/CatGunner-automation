@@ -72,3 +72,27 @@ a no-purchase FAILED result. It blocks rearming until explicit game review, then
 records REVIEWED without changing the prior outcome to VERIFIED. The review gate
 is process-local; pending jobs are never restored after process death, and
 unfinished historical receipts remain unverified.
+
+## 0.4.0 bounded run orchestration
+
+`AutoPurchaseRunner` owns an explicit user-started run with a cap from 1 through 5,
+a frozen calibration/capture lease, and one owned purchase request id. It can only
+arm another request after its owned result is VERIFIED. Counts are updated once
+per owned id; a previous manual purchase cannot consume or inflate a new run's
+budget. Receipts carry `autoRunId` for correlation.
+
+Before each step, fresh complete readings are ranked by `PurchaseSelector`:
+lowest exact decimal price among affordable controls with identical suffixes, or
+explicit Power/Speed/Money rotation without price-scale assumptions. Mixed units
+block the price-ranking rule. This is not expected-progress or DPS optimization.
+
+`PurchasePipeline` samples all three banknote icons and applies the selected
+request's match to both preconditions and final gesture checks. The one-purchase
+engine retains all existing calibration, foreground, timing, double-read,
+currency, callback, uncertainty and post-action verification guards. The runner
+never dispatches gestures itself and has no gesture queue or retry path.
+
+WAITING has a fixed 30-second readiness budget per new step. Existing one-purchase
+deadlines govern an owned step. Failure, uncertain outcome, lease change, explicit
+stop, access revocation or foreground loss stops the run. Resume never starts a
+run; a fresh explicit command is required. All pending run state is volatile.

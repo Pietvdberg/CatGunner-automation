@@ -16,9 +16,11 @@ import android.os.SystemClock
 import android.provider.Settings
 import android.view.View
 import android.view.WindowInsets
+import android.widget.ArrayAdapter
 import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.ScrollView
+import android.widget.Spinner
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -39,6 +41,7 @@ import nl.pietvdberg.catgunner.autopilot.data.ReadingStore
 import nl.pietvdberg.catgunner.autopilot.domain.purchase.PurchasePhase
 import nl.pietvdberg.catgunner.autopilot.domain.state.AutoPilotSession
 import nl.pietvdberg.catgunner.autopilot.domain.state.SessionMode
+import nl.pietvdberg.catgunner.autopilot.domain.strategy.PurchaseRule
 import nl.pietvdberg.catgunner.autopilot.service.CaptureService
 import nl.pietvdberg.catgunner.autopilot.service.SessionCommands
 import nl.pietvdberg.catgunner.autopilot.tiles.AutoPilotTileService
@@ -55,6 +58,11 @@ class MainActivity : ComponentActivity() {
     private lateinit var purchaseStatus: TextView
     private lateinit var calibrationStatus: TextView
     private lateinit var reviewOutcome: Button
+    private lateinit var autoStatus: TextView
+    private lateinit var autoStart: Button
+    private lateinit var autoStop: Button
+    private lateinit var autoCap: Spinner
+    private lateinit var autoRule: Spinner
     private lateinit var diagnostics: TextView
     private val purchaseButtons = mutableMapOf<UpgradeKind, Button>()
     private lateinit var start: Button
@@ -135,6 +143,7 @@ class MainActivity : ComponentActivity() {
             startActivity(Intent(this, CalibrationActivity::class.java))
         }
         button(R.string.calibration_clear) {
+            PurchaseRuntime.autoRunner.stop("Calibration reset. Automatic run stopped.")
             PurchaseRuntime.engine.cancel("Calibration reset.")
             CalibrationStore(this).clear()
             render()
@@ -143,9 +152,10 @@ class MainActivity : ComponentActivity() {
         content.addView(diagnostics)
         button(R.string.copy_diagnostics) {
             val text = listOf(
-                "AutoPilot 0.3.3",
+                "AutoPilot 0.4.0",
                 calibrationStatus.text,
                 purchaseStatus.text,
+                autoStatus.text,
                 diagnostics.text
             ).joinToString("\n")
             getSystemService(ClipboardManager::class.java).setPrimaryClip(
@@ -157,6 +167,32 @@ class MainActivity : ComponentActivity() {
         content.addView(purchaseStatus)
         reviewOutcome = button(R.string.review_outcome) {
             PurchaseRuntime.engine.acknowledgeUnconfirmed()
+        }
+        content.addView(TextView(this).apply { setText(R.string.auto_intro) })
+        autoStatus = TextView(this).apply { textSize = 16f }
+        content.addView(autoStatus)
+        content.addView(TextView(this).apply { setText(R.string.auto_cap_label) })
+        autoCap = Spinner(this).apply {
+            adapter = ArrayAdapter.createFromResource(
+                this@MainActivity,
+                R.array.auto_caps,
+                android.R.layout.simple_spinner_dropdown_item
+            )
+            setSelection(1)
+        }
+        content.addView(autoCap)
+        content.addView(TextView(this).apply { setText(R.string.auto_rule_label) })
+        autoRule = Spinner(this).apply {
+            adapter = ArrayAdapter.createFromResource(
+                this@MainActivity,
+                R.array.auto_rules,
+                android.R.layout.simple_spinner_dropdown_item
+            )
+        }
+        content.addView(autoRule)
+        autoStart = button(R.string.auto_start) { startAuto() }
+        autoStop = button(R.string.auto_stop) {
+            PurchaseRuntime.autoRunner.stop("Stopped by user. No automatic resume.")
         }
         UpgradeKind.entries.forEach { kind ->
             val label = when (kind) {
@@ -182,6 +218,7 @@ class MainActivity : ComponentActivity() {
             activeScope.launch { controller.state.collect { render() } }
             activeScope.launch { PreviewStore.preview.collect { render() } }
             activeScope.launch { PurchaseRuntime.engine.report.collect { render() } }
+            activeScope.launch { PurchaseRuntime.autoRunner.report.collect { render() } }
             activeScope.launch { ReadingStore.reading.collect { render() } }
             activeScope.launch { LiveDiagnostics.state.collect { render() } }
             activeScope.launch {
@@ -195,6 +232,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
+        PurchaseRuntime.autoRunner.stop("Returned to AutoPilot. Automatic run stopped.")
         PurchaseRuntime.engine.cancel("Returned to AutoPilot. No further tap may dispatch.")
         render()
     }
@@ -354,6 +392,9 @@ class MainActivity : ComponentActivity() {
         } else {
             View.GONE
         }
+        val run = PurchaseRuntime.autoRunner.report.value
+        autoStatus.text =
+            getString(R.string.auto_status, run.phase.name, run.verified, run.limit, run.detail)
         val active =
             report.phase in
                 setOf(PurchasePhase.ARMED, PurchasePhase.DISPATCHED, PurchasePhase.VERIFYING)
@@ -361,10 +402,20 @@ class MainActivity : ComponentActivity() {
             it.isEnabled = calibrated &&
                 accessibility &&
                 !active &&
+                !run.active &&
                 report.phase != PurchasePhase.UNCONFIRMED &&
                 state.mode == SessionMode.OBSERVING &&
                 state.captureActive
         }
+        autoStart.isEnabled = calibrated &&
+            accessibility &&
+            !active &&
+            !run.active &&
+            report.phase != PurchasePhase.UNCONFIRMED &&
+            state.mode == SessionMode.OBSERVING
+        autoStop.isEnabled = run.active
+        autoCap.isEnabled = !run.active
+        autoRule.isEnabled = !run.active
         start.isEnabled = state.mode == SessionMode.STOPPED || state.mode == SessionMode.ERROR
         pause.isEnabled = state.mode == SessionMode.OBSERVING
         resume.isEnabled = state.mode == SessionMode.PAUSED && state.captureActive
@@ -372,6 +423,7 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun armPurchase(kind: UpgradeKind) {
+        if (PurchaseRuntime.autoRunner.report.value.active) return
         val calibration = CalibrationStore(this).load() ?: return
         val lease = controller.observationLease() ?: return
         if (GameAccessibilityService.instance == null ||
@@ -380,14 +432,33 @@ class MainActivity : ComponentActivity() {
             return
         }
         if (!PurchaseRuntime.engine.arm(kind, calibration, lease)) return
+        openGame()
+    }
+
+    private fun startAuto() {
+        val calibration = CalibrationStore(this).load() ?: return
+        val lease = controller.observationLease() ?: return
+        if (GameAccessibilityService.instance == null ||
+            calibration.gameVersion != CalibrationStore.gameVersion(this)
+        ) {
+            return
+        }
+        val limit = listOf(1, 3, 5)[autoCap.selectedItemPosition]
+        val rule = PurchaseRule.entries[autoRule.selectedItemPosition]
+        if (PurchaseRuntime.autoRunner.start(limit, rule, calibration, lease)) openGame()
+    }
+
+    private fun openGame() {
         val game = packageManager.getLaunchIntentForPackage(CalibrationStore.GAME_PACKAGE)
         if (game == null) {
+            PurchaseRuntime.autoRunner.stop("Game could not be opened.")
             PurchaseRuntime.engine.cancel("Game could not be opened.")
             Toast.makeText(this, R.string.game_missing, Toast.LENGTH_LONG).show()
         } else {
             try {
                 startActivity(game)
             } catch (error: RuntimeException) {
+                PurchaseRuntime.autoRunner.stop("Game could not be opened.")
                 PurchaseRuntime.engine.cancel("Game could not be opened.")
             }
         }
