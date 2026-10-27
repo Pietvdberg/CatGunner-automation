@@ -40,12 +40,14 @@ class TextPixels private constructor(
             val regions = OcrField.entries.flatMap { field ->
                 UpgradeKind.entries.map { kind ->
                     val offset = kind.ordinal * 169
-                    val top = if (field == OcrField.LEVEL) 1148 else 1214
-                    val bottom = if (field == OcrField.LEVEL) 1182 else 1255
+                    val left = if (field == OcrField.LEVEL) 118 else 94
+                    val right = if (field == OcrField.LEVEL) 198 else 179
+                    val top = if (field == OcrField.LEVEL) 1154 else 1219
+                    val bottom = if (field == OcrField.LEVEL) 1179 else 1250
                     Region(
-                        ((35L + offset) * pixels.width / 570).toInt(),
+                        ((left.toLong() + offset) * pixels.width / 570).toInt(),
                         (top.toLong() * pixels.height / 1280).toInt(),
-                        ((201L + offset) * pixels.width / 570).toInt(),
+                        ((right.toLong() + offset) * pixels.width / 570).toInt(),
                         (bottom.toLong() * pixels.height / 1280).toInt()
                     )
                 }
@@ -69,6 +71,19 @@ class TextPixels private constructor(
 
 data class BoundedOcrToken(val token: UpgradeOcrToken, val bounds: TextPixels.Region)
 
+enum class RecheckStatus {
+    EMPTY,
+    HIT,
+    SEEDED,
+    SOURCE_EXPIRED,
+    PIXELS_CHANGED,
+    SOURCE_UNREADABLE,
+    TOKEN_BOUNDS,
+    INVALIDATED,
+    CONTEXT_CHANGED,
+    CHANGED_DURING_OCR
+}
+
 enum class OcrField { LEVEL, COST }
 data class OcrContext(val lease: ActionLease, val gameVersion: Long)
 
@@ -83,6 +98,8 @@ class ExactTextCache {
     private var entry: Entry? = null
     private var latestPixels: TextPixels? = null
     private var latestContext: OcrContext? = null
+    var lastStatus = RecheckStatus.EMPTY
+        private set
     var epoch: Long = 0
         private set
 
@@ -91,24 +108,34 @@ class ExactTextCache {
         latestPixels = null
         latestContext = null
         epoch++
+        lastStatus = RecheckStatus.INVALIDATED
     }
 
     fun observe(pixels: TextPixels, context: OcrContext, capturedAt: Long): UpgradeOcrResult? {
         if (latestContext != null && latestContext != context) invalidate()
         latestPixels = pixels
         latestContext = context
-        val cached = entry ?: return null
-        if (cached.context != context ||
-            capturedAt - cached.capturedAt !in 1..2000 ||
-            !cached.pixels.sameAs(pixels)
-        ) {
-            entry = null
+        val cached = entry ?: run {
+            lastStatus = RecheckStatus.EMPTY
             return null
         }
+        val rejection = when {
+            cached.context != context -> RecheckStatus.CONTEXT_CHANGED
+            capturedAt - cached.capturedAt !in 1..2000 -> RecheckStatus.SOURCE_EXPIRED
+            !cached.pixels.sameAs(pixels) -> RecheckStatus.PIXELS_CHANGED
+            else -> null
+        }
+        if (rejection != null) {
+            entry = null
+            lastStatus = rejection
+            return null
+        }
+        lastStatus = RecheckStatus.HIT
         return cached.result.copy(
             detail = "Exact live text pixels match full-strip OCR; source age=" +
                 "${capturedAt - cached.capturedAt} ms. ${cached.result.detail}",
-            pixelRecheck = true
+            pixelRecheck = true,
+            recheckStatus = RecheckStatus.HIT
         )
     }
 
@@ -120,21 +147,22 @@ class ExactTextCache {
         sourceEpoch: Long,
         tokenBoundsCovered: Boolean
     ) {
-        val upgrades = result.upgrades ?: return
-        if (sourceEpoch != epoch ||
-            !tokenBoundsCovered ||
-            upgrades.keys != UpgradeKind.entries.toSet() ||
-            latestContext != context ||
-            latestPixels?.sameAs(pixels) != true
-        ) {
-            return
+        val upgrades = result.upgrades
+        lastStatus = when {
+            sourceEpoch != epoch -> RecheckStatus.INVALIDATED
+            upgrades?.keys != UpgradeKind.entries.toSet() -> RecheckStatus.SOURCE_UNREADABLE
+            !tokenBoundsCovered -> RecheckStatus.TOKEN_BOUNDS
+            latestContext != context -> RecheckStatus.CONTEXT_CHANGED
+            latestPixels?.sameAs(pixels) != true -> RecheckStatus.CHANGED_DURING_OCR
+            else -> RecheckStatus.SEEDED
         }
+        if (lastStatus != RecheckStatus.SEEDED) return
         entry =
             Entry(
                 pixels,
                 context,
                 capturedAt,
-                result.copy(upgrades = upgrades.toMap(), pixelRecheck = false)
+                result.copy(upgrades = upgrades!!.toMap(), pixelRecheck = false)
             )
     }
 }

@@ -269,3 +269,35 @@ inference, but animation may force frequent fallback to native OCR.
 
 Signature, unchanged certificate, version code 12 and 16 KiB ZIP alignment were
 verified. ZIP and standalone APK bytes match. APK SHA-256: `3aa6ad4f300389df8f8de8ae6e4ecd9d10d04977bc92df8dc3700405c13794f4`.
+
+## 0.4.6 retain valid evidence across incomplete text; watch text-only patches
+
+Ran `tools/cloud-gradle.sh -PsplitApks assembleDebug testDebugUnitTest lintDebug
+ktlintCheck`: all passed. 153 tests executed, zero failures/errors/skips. Eight new
+tests cover incomplete text between valid preconditions, retained post-call proof,
+unchanged deadlines and expired first observations, a new pair after a long gap,
+queued-token retention without sending from partial text, actual unknown-layout
+deferral, bounded timed deferral history, cache rejection aggregation, changes to
+background/icons outside watched text and cache admission reason classification.
+Existing tests still cover unknown actual UI resets, currency/freshness gates,
+unexpected valid level changes, duplicate-frame exclusion and cap enforcement.
+
+Partial or stale OCR supplies no new observation and never dispatches a gesture.
+It does not erase a valid complete observation. Two complete fresh preconditions
+within 1500 ms and two distinct complete post-call observations are still required;
+known conflicting readings still fail/reset normally. Precondition pairs with a
+longer gap restart from the new reading instead of sending from old evidence.
+Actual unknown UI keeps its reset/deferral behavior. Original deadlines, review
+requirements, no gesture retry, foreground/session checks and financial gates are
+unchanged. Narrowed cache regions use exact RGB equality and require complete
+native token-box coverage; OCR image layout is unchanged. Enum-bounded cache
+admission rejection counters and up to four timed preparation reasons persist in
+each terminal timing summary. No per-frame disk logging was added.
+
+Owner evidence on 0.4.5 shows four verified requests and a fifth UNCONFIRMED after
+foreground loss, rare cache hits and 5.4–9.6 second step times. It does not identify
+the exact old cache/preparation block. There is no measured phone speedup for
+0.4.6; native accuracy, match rate and latency still require phone validation.
+
+Signature, unchanged certificate, version code 13 and 16 KiB ZIP alignment verified.
+ZIP and standalone APK bytes match. APK SHA-256: `0e46857f68eaf1e6d1a866a296168cd9976e74d41753f3b692f1e154f0dca19c`.

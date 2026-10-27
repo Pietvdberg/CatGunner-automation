@@ -86,3 +86,20 @@ the owner confirms the absolute speed is unacceptable. First selection includes
 0.4.5 targets redundant inference with exact live text-pixel rechecks, retaining
 full-strip OCR for changed pixels. Its live match rate, accuracy and per-purchase
 latency need phone validation. No phone speedup is claimed from cloud tests.
+
+## 0.4.5 rare cache reuse and unfinished fifth purchase (135730.jpg)
+
+Four purchases VERIFIED; the fifth Power tap is UNCONFIRMED after a foreground
+check OTHER_APP. The image is of AutoPilot and does not establish which foreign
+window first caused the stop. Totals: Money 5425 ms, Power 6161 ms, Speed 6462 ms,
+Money 6014 ms, Power 9565 ms. Only two pixel rechecks are shown across all before/
+after summaries: before #1 and after #2. Most steps still use repeated 500–700 ms
+native OCR. Fifth preparation took 6040 ms with two deferrals; the exact reasons
+were overwritten by the successful gesture callback and are not established here.
+
+0.4.6 retains partial-text observations without counting them as new proof, keeps
+unknown-layout resets, narrows RGB comparison to text and retains cache-admission
+and queue-deferral reasons. The larger old regions included non-text areas, but
+this screenshot alone does not prove which cache-admission gate dominated. There
+is no new phone timing result yet. The fifth upgrade may already have occurred;
+no automatic retry is permitted. Source SHA-256: `55e581c2b4fa1fde21c2fd748d31a0e3bedb6b0338ed458a9d291f46ba68a833`.

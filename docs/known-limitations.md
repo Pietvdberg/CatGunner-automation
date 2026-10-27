@@ -72,3 +72,12 @@ is not independently inferred again for a pixel-identical confirmation frame;
 verification uses a fresh frame with identical watched text and renewed visual,
 currency, foreground, session and freshness checks. Two distinct post-call frames
 must still show exactly one level increase. New text always needs native OCR.
+
+Owner 0.4.5 evidence shows rare cache hits and continued 5–9.6 second steps, with
+four VERIFIED and one UNCONFIRMED after foreground loss. 0.4.6 narrows exact
+comparison and stops partial OCR from discarding prior valid evidence. It retains
+two distinct complete observations; they need not be adjacent successful OCR
+calls if only incomplete text intervenes. Unknown actual layout still resets.
+There is no measured phone improvement for this update. Cache rejection enums
+and retained deferral reasons expose remaining misses rather than establishing a
+cause from timing alone. Full-strip native OCR and the manual review gate remain.

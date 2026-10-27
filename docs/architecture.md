@@ -143,3 +143,15 @@ RGBA bulk copies preserve the exact full-strip input and fall back on checked
 copies for unsupported strides or a missing final alpha byte. No raw frame buffer
 is retained beyond its Image lifetime. A bounded set of copied text patches lives
 in memory only. No per-frame disk writes or additional native OCR tasks are added.
+
+0.4.6 separates partial/stale text results (waitForText) from unknown actual UI
+(waitForEvidence). Partial text does not dispatch or count as verification; it
+retains valid observations within the original time bounds. A precondition pair
+more than 1500 ms apart is restarted with the new reading, never dispatched from
+the old one. Valid conflicting readings still fail/clear according to the normal
+engine rules. Unknown UI retains its existing reset/deferral behavior. No action
+deadline is extended. Narrower exact RGB regions (reference level x118–198,
+y1154–1179, price x94–179, y1219–1250, plus per-control offset) exclude surrounding
+icons and background. Token-box coverage remains mandatory for cache admission.
+Bounded enum-based cache reject counts and four deferral reasons live on each
+purchase timing snapshot and its receipt summary.

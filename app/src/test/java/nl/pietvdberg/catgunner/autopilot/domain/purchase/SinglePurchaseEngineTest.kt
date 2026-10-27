@@ -1,6 +1,7 @@
 package nl.pietvdberg.catgunner.autopilot.domain.purchase
 
 import nl.pietvdberg.catgunner.autopilot.domain.state.ActionLease
+import nl.pietvdberg.catgunner.autopilot.vision.RecheckStatus
 import nl.pietvdberg.catgunner.autopilot.vision.UpgradeKind
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -688,6 +689,102 @@ class SinglePurchaseEngineTest {
         assertEquals(1L, stats.pixelRechecks)
         assertEquals(600L, stats.totalWorkMillis)
         assertTrue(stats.describe().contains("native OCR avg/max=600/600"))
+    }
+
+    @Test
+    fun incompleteTextBetweenTwoFreshPreconditionsDoesNotRestartReadiness() {
+        arm()
+        feed()
+        engine.waitForText("Missing SPEED cost")
+        assertEquals(0, dispatches)
+        feed()
+        assertEquals(PurchasePhase.DISPATCHED, engine.report.value.phase)
+        assertEquals(1, dispatches)
+    }
+
+    @Test
+    fun incompleteTextDoesNotEraseAValidPostCallObservation() {
+        dispatchOnce()
+        engine.gestureCompleted(engine.report.value.id, true)
+        feed(level = 11)
+        assertEquals(1, engine.report.value.verificationSamples)
+        engine.waitForText("Unreadable MONEY level")
+        assertEquals(1, engine.report.value.verificationSamples)
+        feed(level = 11)
+        assertEquals(PurchasePhase.VERIFIED, engine.report.value.phase)
+        assertEquals(1, dispatches)
+    }
+
+    @Test
+    fun retainedTextObservationsStillExpireAndNeverExtendActionDeadlines() {
+        arm()
+        feed()
+        now += 1600
+        engine.waitForText("Partial OCR")
+        feed()
+        assertEquals(0, dispatches)
+        feed()
+        assertEquals(1, dispatches)
+        engine.gestureCompleted(engine.report.value.id, true)
+        feed(level = 11)
+        now += 8001
+        engine.waitForText("Still incomplete")
+        assertEquals(PurchasePhase.UNCONFIRMED, engine.report.value.phase)
+        assertEquals(1, dispatches)
+    }
+
+    @Test
+    fun aLongGapRequiresTwoNewPreconditionsWithoutDispatchingFromTheOldOne() {
+        arm()
+        feed()
+        now += 1600
+        feed()
+        assertEquals(PurchasePhase.ARMED, engine.report.value.phase)
+        assertEquals(0, dispatches)
+        feed()
+        assertEquals(1, dispatches)
+    }
+
+    @Test
+    fun textFailureCannotDispatchAQueuedRequestOrChangeItsOriginalToken() {
+        arm()
+        feed()
+        now += 250
+        engine.onReading(reading()) { _, _, _ -> true }
+        val request = engine.report.value
+        engine.waitForText("Extra OCR result incomplete")
+        assertEquals(request.dispatchAttempt, engine.report.value.dispatchAttempt)
+        assertEquals(PurchasePhase.DISPATCHED, engine.report.value.phase)
+        assertEquals(0, dispatches)
+        engine.waitForEvidence("Unknown actual screen")
+        assertEquals(PurchasePhase.ARMED, engine.report.value.phase)
+        assertEquals(1, engine.report.value.timing!!.deferralReasons.size)
+        assertTrue(
+            engine.report.value.timing!!.deferralReasons.single().contains("Unknown actual screen")
+        )
+    }
+
+    @Test
+    fun cacheRejectionsAndRecentDeferralReasonsSurviveInThePurchaseTiming() {
+        arm()
+        val id = engine.report.value.id
+        engine.recordOcr(id, now, 600, 600, true, recheckStatus = RecheckStatus.TOKEN_BOUNDS)
+        assertEquals(
+            1L,
+            engine.report.value.timing!!.beforeOcr.cacheRejects[RecheckStatus.TOKEN_BOUNDS]
+        )
+        repeat(5) { index ->
+            now += 250
+            engine.onReading(reading()) { _, _, _ -> error("Only one frame") }
+            now += 250
+            engine.onReading(reading()) { _, _, _ -> true }
+            engine.deferQueued(id, engine.report.value.dispatchAttempt, "Block $index")
+        }
+        val timing = engine.report.value.timing!!
+        assertEquals(5, timing.deferrals)
+        assertEquals(4, timing.deferralReasons.size)
+        assertTrue(timing.deferralReasons.first().contains("Block 1"))
+        assertEquals(0, dispatches)
     }
 
     private fun arm() {

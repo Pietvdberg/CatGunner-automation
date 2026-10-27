@@ -6,6 +6,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import nl.pietvdberg.catgunner.autopilot.domain.safety.PurchaseCurrency
 import nl.pietvdberg.catgunner.autopilot.domain.safety.SpendingPolicy
 import nl.pietvdberg.catgunner.autopilot.domain.state.ActionLease
+import nl.pietvdberg.catgunner.autopilot.vision.RecheckStatus
 import nl.pietvdberg.catgunner.autopilot.vision.UpgradeKind
 import nl.pietvdberg.catgunner.autopilot.vision.UpgradeTextParser
 
@@ -137,6 +138,23 @@ class SinglePurchaseEngine(private val clock: () -> Long) {
         }
     }
 
+    /** Incomplete OCR supplies no new evidence. Existing observations retain their original limits. */
+    @Synchronized
+    fun waitForText(reason: String) {
+        tick()
+        if (!active()) return
+        if (report.value.phase == PurchasePhase.ARMED &&
+            previous?.let { clock() - it.capturedAt > 1500 } == true
+        ) {
+            previous = null
+        }
+        val timing = report.value.timing!!
+        mutableReport.value = report.value.copy(
+            timing = timing.copy(unknownObservations = timing.unknownObservations + 1),
+            detail = "Waiting for readable text; no new evidence: $reason"
+        )
+    }
+
     /** Attribute only current-request frames; old callbacks cannot contaminate the next purchase. */
     @Synchronized
     fun recordOcr(
@@ -145,7 +163,8 @@ class SinglePurchaseEngine(private val clock: () -> Long) {
         workMillis: Long,
         frameAgeMillis: Long,
         readable: Boolean,
-        pixelRecheck: Boolean = false
+        pixelRecheck: Boolean = false,
+        recheckStatus: RecheckStatus? = null
     ) {
         val timing = report.value.timing ?: return
         if (!active() || report.value.id != id || capturedAt < timing.armedAt) return
@@ -156,7 +175,8 @@ class SinglePurchaseEngine(private val clock: () -> Long) {
             frameAgeMillis,
             readable,
             maximumReadingAgeMillis(),
-            pixelRecheck
+            pixelRecheck,
+            recheckStatus
         )
         mutableReport.value = report.value.copy(
             timing = if (afterCall) {
@@ -219,7 +239,15 @@ class SinglePurchaseEngine(private val clock: () -> Long) {
         deadline = armDeadline
         mutableReport.value = report.value.copy(
             phase = PurchasePhase.ARMED,
-            timing = report.value.timing?.let { it.copy(deferrals = it.deferrals + 1) },
+            timing = report.value.timing?.let {
+                it.copy(
+                    deferrals = it.deferrals + 1,
+                    deferralReasons = (
+                        it.deferralReasons +
+                            "${clock() - it.armedAt} ms: ${reason.take(120)}"
+                        ).takeLast(4)
+                )
+            },
             detail = "No tap sent; waiting for two new fresh readings: $reason"
         )
         return true
@@ -299,9 +327,8 @@ class SinglePurchaseEngine(private val clock: () -> Long) {
                 previous = reading
                 if (prior == null) return
                 if (reading.capturedAt <= prior.capturedAt) return
-                if (reading.capturedAt - prior.capturedAt > 1500 ||
-                    prior.upgrades != reading.upgrades
-                ) {
+                if (reading.capturedAt - prior.capturedAt > 1500) return
+                if (prior.upgrades != reading.upgrades) {
                     unsafe("Upgrade preconditions changed before dispatch.")
                     return
                 }

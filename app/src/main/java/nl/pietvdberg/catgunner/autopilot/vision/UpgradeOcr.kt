@@ -79,7 +79,7 @@ class UpgradeOcr : AutoCloseable {
                                 sourceEpoch,
                                 textPixels.covers(tokens)
                             )
-                            parsed
+                            parsed.copy(recheckStatus = cache.lastStatus)
                         } else {
                             val error = task.exception
                             val code = (error as? MlKitException)?.errorCode
@@ -91,7 +91,8 @@ class UpgradeOcr : AutoCloseable {
                         val duration = SystemClock.elapsedRealtime() - startedAt
                         completed(
                             result.copy(
-                                detail = "OCR work=$duration ms. ${result.detail}",
+                                detail = "OCR work=$duration ms; cache=${result.recheckStatus}. " +
+                                    result.detail,
                                 workMillis = duration
                             )
                         )

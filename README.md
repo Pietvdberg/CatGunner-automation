@@ -1,7 +1,7 @@
 # CatGunner AutoPilot
 
 Private, on-device Android assistant for Idle Cat Gunner (`com.Chodun.CatGunner`).
-Version 0.4.5 adds exact live-pixel rechecks to reduce repeated OCR in
+Version 0.4.6 reduces unnecessary OCR restarts and narrows exact live-pixel rechecks in
 **bounded automatic purchasing**, with per-purchase timing retained. The owner has
 validated a complete five-purchase run on 0.4.1. Each run has a 1/3/5-purchase cap, with one verified action
 at a time. Expected-gain optimization and Rebirth Rush remain future milestones. Green banknotes
@@ -9,11 +9,11 @@ are the only permitted currency; gems, unknown currencies and real money are for
 
 ## Download on your phone or computer
 
-- **[Download Pixel 10 APK (17.2 MB)](https://github.com/Pietvdberg/CatGunner-automation/raw/refs/tags/v0.4.5/downloads/AutoPilot-Pixel10-0.4.5.apk)**
-- **[Download ZIP with APK and USB-install instructions (9.5 MB)](https://github.com/Pietvdberg/CatGunner-automation/raw/refs/tags/v0.4.5/downloads/AutoPilot-Pixel10-download.zip)**
+- **[Download Pixel 10 APK (17.2 MB)](https://github.com/Pietvdberg/CatGunner-automation/raw/refs/tags/v0.4.6/downloads/AutoPilot-Pixel10-0.4.6.apk)**
+- **[Download ZIP with APK and USB-install instructions (9.5 MB)](https://github.com/Pietvdberg/CatGunner-automation/raw/refs/tags/v0.4.6/downloads/AutoPilot-Pixel10-download.zip)**
 - [View installation instructions](downloads/INSTALL.txt) and [SHA-256 checksums](downloads/SHA256SUMS).
 
-These are signed 0.4.5 builds. Hosting on GitHub fixes
+These are signed 0.4.6 builds. Hosting on GitHub fixes
 file access; it does not remove Play Protect's installation block. A work computer
 can download the files without installing software. USB/ADB installation requires
 a computer on which you are allowed to run Android Platform-Tools.
@@ -268,3 +268,27 @@ OCR average/max time, so short rechecks do not dilute inference timing. Pixel
 recheck hit rate and end-to-end speed need phone validation; no speedup is claimed
 from cloud unit tests. The first full OCR and each changed level/price still incur
 native inference latency. No Rebirth Rush or continuous unbounded mode is enabled.
+
+## 0.4.6 avoids restarting on incomplete OCR
+
+A partial/stale OCR result supplies no new evidence; it no longer erases an
+already valid observation. Before a tap, two fresh complete stable readings still
+must be within 1500 ms of each other. A longer gap seeds a new pair without
+sending a tap. After a tap, two distinct complete post-call frames must still show
+exactly one level increase with unchanged other levels and matching new cost.
+Incomplete text does not count as either observation. Actual unknown layout still
+resets observations, and freshness limits, original readiness/callback/verification
+deadlines, foreground checks, financial checks and no gesture retry remain.
+
+Pixel comparison now watches the level/price text areas rather than full card
+widths containing currency icons and animated background. Full-strip native OCR
+input remains unchanged. Every source token box must fit the watched region;
+otherwise reuse is disabled and native OCR continues. Exact RGB equality is still
+required; no fuzzy mask, guessed character or predicted level was added.
+
+Per-purchase diagnostics retain bounded cache-admission rejection counts such as
+TOKEN_BOUNDS or CHANGED_DURING_OCR, plus the last four preparation deferral reasons
+with elapsed times. This exposes the cause instead of losing it after a successful
+gesture callback. Native hit rate and end-to-end speed still need phone validation.
+An UNCONFIRMED tap may already have purchased an upgrade; inspect the game before
+starting a new run. Returning to another app still stops foreground-only operation.

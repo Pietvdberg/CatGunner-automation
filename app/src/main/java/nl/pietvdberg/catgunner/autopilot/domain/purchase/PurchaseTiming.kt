@@ -1,9 +1,12 @@
 package nl.pietvdberg.catgunner.autopilot.domain.purchase
 
+import nl.pietvdberg.catgunner.autopilot.vision.RecheckStatus
+
 /** Bounded aggregates only; no frame history or per-frame disk writes. */
 data class OcrTimingSummary(
     val samples: Long = 0,
     val pixelRechecks: Long = 0,
+    val cacheRejects: Map<RecheckStatus, Long> = emptyMap(),
     val readable: Long = 0,
     val stale: Long = 0,
     val totalWorkMillis: Long = 0,
@@ -15,8 +18,17 @@ data class OcrTimingSummary(
         frameAgeMillis: Long,
         isReadable: Boolean,
         ageLimit: Long,
-        pixelRecheck: Boolean = false
+        pixelRecheck: Boolean = false,
+        recheckStatus: RecheckStatus? = null
     ) = copy(
+        cacheRejects = if (!pixelRecheck &&
+            recheckStatus != null &&
+            recheckStatus !in setOf(RecheckStatus.SEEDED, RecheckStatus.HIT)
+        ) {
+            cacheRejects + (recheckStatus to ((cacheRejects[recheckStatus] ?: 0L) + 1))
+        } else {
+            cacheRejects
+        },
         samples = samples + 1,
         pixelRechecks = pixelRechecks + if (pixelRecheck) 1 else 0,
         readable = readable + if (isReadable) 1 else 0,
@@ -36,7 +48,7 @@ data class OcrTimingSummary(
     fun describe(): String = "readable=$readable/$samples, stale=$stale, " +
         "pixel rechecks=$pixelRechecks; native OCR avg/max=" +
         "${if (samples == pixelRechecks) "—" else totalWorkMillis / (samples - pixelRechecks)}/" +
-        "$maximumWorkMillis ms, max frame age=$maximumFrameAgeMillis ms"
+        "$maximumWorkMillis ms, max frame age=$maximumFrameAgeMillis ms; cache rejects=$cacheRejects"
 }
 
 /** All milestones use elapsed realtime, never wall time. Missing stages stay unknown. */
@@ -48,6 +60,7 @@ data class PurchaseTiming(
     val callbackAt: Long? = null,
     val finishedAt: Long? = null,
     val deferrals: Int = 0,
+    val deferralReasons: List<String> = emptyList(),
     val unknownObservations: Int = 0,
     val beforeOcr: OcrTimingSummary = OcrTimingSummary(),
     val afterOcr: OcrTimingSummary = OcrTimingSummary()
@@ -63,7 +76,8 @@ data class PurchaseTiming(
             "preparation=${duration(firstQueuedAt, callAt)}; " +
             "callback=${duration(callAt, callbackAt)}; " +
             "verification=${duration(callbackAt, finishedAt)}; " +
-            "deferrals=$deferrals; unknown observations=$unknownObservations\n" +
+            "deferrals=$deferrals; reasons=$deferralReasons; " +
+            "unknown observations=$unknownObservations\n" +
             "OCR before call: ${beforeOcr.describe()}\nOCR after call: ${afterOcr.describe()}"
     }
 }

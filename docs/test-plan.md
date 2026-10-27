@@ -179,3 +179,14 @@ is established until these measurements are supplied. Pause, app switching,
 unknown dialogs and actual gestures must invalidate reuse. Existing tests cover
 cache expiry/context, changed pixels, late native completion and distinct frames;
 manual phone checks are still needed for the full native/rendering integration.
+
+## Incomplete text and cache rejection diagnostics (0.4.6)
+
+Repeat a short bounded run after reviewing any previous UNCONFIRMED result.
+Check numbered timing rows for cache rejects (TOKEN_BOUNDS versus
+CHANGED_DURING_OCR, etc.), pixel rechecks, native inference timing and preparation
+reasons. Partial OCR between two valid matching post-call frames must not erase
+the first observation or count as a new one. Actual unknown layout must still
+reset it. A pre-call gap over 1500 ms must require a new two-frame pair. Repeated
+incomplete text must not extend the readiness/verification deadlines. Foreground
+loss after a tap still means UNCONFIRMED and ends the run. No repeat gesture.

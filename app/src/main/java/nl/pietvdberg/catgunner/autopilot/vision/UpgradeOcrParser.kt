@@ -9,7 +9,8 @@ data class UpgradeOcrResult(
     val upgrades: Map<UpgradeKind, UpgradeReading>?,
     val detail: String,
     val workMillis: Long = 0,
-    val pixelRecheck: Boolean = false
+    val pixelRecheck: Boolean = false,
+    val recheckStatus: RecheckStatus? = null
 ) {
     fun withCurrentAppearance(evidence: UpgradePanelEvidence): UpgradeOcrResult {
         if (!evidence.recognized) {

@@ -13,6 +13,7 @@ import nl.pietvdberg.catgunner.autopilot.vision.BoundedOcrToken
 import nl.pietvdberg.catgunner.autopilot.vision.ExactTextCache
 import nl.pietvdberg.catgunner.autopilot.vision.OcrContext
 import nl.pietvdberg.catgunner.autopilot.vision.PixelSource
+import nl.pietvdberg.catgunner.autopilot.vision.RecheckStatus
 import nl.pietvdberg.catgunner.autopilot.vision.TextPixels
 import nl.pietvdberg.catgunner.autopilot.vision.UpgradeAppearance
 import nl.pietvdberg.catgunner.autopilot.vision.UpgradeKind
@@ -226,6 +227,30 @@ class ExactTextCacheTest {
         assertEquals(2, engine.report.value.verificationSamples)
         assertEquals(1, taps)
         assertTrue(beforeRecheck.pixelRecheck && afterRecheck.pixelRecheck)
+    }
+
+    @Test
+    fun animatedBackgroundAndCurrencyIconOutsideTextDoNotBreakExactTextMatch() {
+        remember()
+        for ((x, y) in listOf(40 to 1160, 60 to 1235, 200 to 1235, 120 to 1148)) {
+            val changed = TextPixels.capture(pixels(change = x to y))
+            assertTrue(seed.sameAs(changed))
+            assertNotNull(cache.observe(changed, context, 1100))
+        }
+    }
+
+    @Test
+    fun cacheAdmissionDiagnosticsDistinguishUncoveredTokensAndChangingText() {
+        cache.observe(seed, context, 1000)
+        cache.remember(seed, context, 1000, result, cache.epoch, false)
+        assertEquals(RecheckStatus.TOKEN_BOUNDS, cache.lastStatus)
+        val region = seed.regions.first()
+        val changed = TextPixels.capture(pixels(change = region.left to region.top))
+        cache.observe(changed, context, 1100)
+        cache.remember(seed, context, 1000, result, cache.epoch, true)
+        assertEquals(RecheckStatus.CHANGED_DURING_OCR, cache.lastStatus)
+        cache.remember(changed, context, 1100, result, cache.epoch, true)
+        assertEquals(RecheckStatus.SEEDED, cache.lastStatus)
     }
 
     private fun remember() {

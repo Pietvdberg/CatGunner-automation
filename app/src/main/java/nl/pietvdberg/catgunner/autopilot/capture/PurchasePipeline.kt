@@ -99,7 +99,8 @@ class PurchasePipeline(private val context: Context) : AutoCloseable {
                 result.workMillis,
                 ageMillis,
                 upgrades != null,
-                result.pixelRecheck
+                result.pixelRecheck,
+                result.recheckStatus
             )
             val callbackForeground = GameAccessibilityService.instance?.foregroundStatus()
                 ?: ForegroundStatus.DISCONNECTED
@@ -108,11 +109,11 @@ class PurchasePipeline(private val context: Context) : AutoCloseable {
                 return@sample
             }
             if (upgrades == null) {
-                engine.waitForEvidence("OCR is not ready: ${result.detail}")
+                engine.waitForText("OCR is not ready: ${result.detail}")
                 return@sample
             }
             if (SystemClock.elapsedRealtime() - capturedAt > engine.maximumReadingAgeMillis()) {
-                engine.waitForEvidence("OCR frame is stale; waiting for a fresh reading.")
+                engine.waitForText("OCR frame is stale; waiting for a fresh reading.")
                 return@sample
             }
             val candidate = GameReading(
