@@ -87,6 +87,37 @@ class AutoPurchaseRunner(private val engine: SinglePurchaseEngine, private val c
         if (report.value.phase != AutoRunPhase.WAITING) return
         val calibration = profile ?: return
         if (clock() - reading.capturedAt !in 0..750 || reading.capturedAt < notBefore) return
+        armCandidate(reading, calibration)
+    }
+
+    /** Only this run's just-verified source can seed a next action; it cannot dispatch by itself. */
+    @Synchronized
+    fun prepareVerifiedHandoff(
+        currentLease: ActionLease?,
+        banknotes: Map<UpgradeKind, Boolean>,
+        lastUnknownAt: Long = -1L
+    ): GameReading? {
+        tick(currentLease)
+        if (report.value.phase != AutoRunPhase.WAITING) return null
+        val receipt = report.value.purchases.lastOrNull() ?: return null
+        if (receipt.autoRunId != report.value.id ||
+            receipt.phase != PurchasePhase.VERIFIED
+        ) {
+            return null
+        }
+        val reading = engine.takeVerifiedFrame(receipt.id) ?: return null
+        if (clock() - reading.capturedAt !in 0..750 ||
+            reading.capturedAt <= lastUnknownAt
+        ) {
+            return null
+        }
+        val calibration = profile ?: return null
+        armCandidate(reading, calibration)
+        if (report.value.phase != AutoRunPhase.RUNNING) return null
+        return reading.copy(banknoteIconsMatched = banknotes[engine.report.value.kind] == true)
+    }
+
+    private fun armCandidate(reading: GameReading, calibration: CalibrationProfile) {
         if (!reading.foregroundVerified ||
             !calibration.matches(reading.width, reading.height, reading.gameVersion)
         ) {

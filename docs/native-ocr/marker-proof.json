@@ -1,0 +1,87 @@
+[
+  {
+    "fixture": "available",
+    "width": 570,
+    "masked": false,
+    "elapsedMillis": 9498,
+    "readable": true,
+    "detail": "POWER: level='Lvo184' parsed=184 markerProof=null, cost='2.62i'; SPEED: level='Lva185' parsed=185 markerProof=185, cost='3.62i'; MONEY: level='Lv.186' parsed=186 markerProof=null, cost='4.99i'",
+    "rawText": "Power\nLvo184\n1016\n2.62i\nSpeed\nLva185\n1580\n3.62i\nMoney\nLv.186\n007b\n4.99i"
+  },
+  {
+    "fixture": "available",
+    "width": 570,
+    "masked": true,
+    "elapsedMillis": 5492,
+    "readable": false,
+    "detail": "Missing/ambiguous MONEY level. POWER: level='Lvo184' parsed=184 markerProof=null, cost='2.62i'; SPEED: level='Lv185' parsed=185 markerProof=null, cost='3.62i'; MONEY: level='Money186' parsed=null markerProof=null, cost='4.99i'",
+    "rawText": "Power\nLvo184\n2.62i\nSpeed\nLv185\n3.62i\nMoney186\n4.99i"
+  },
+  {
+    "fixture": "available",
+    "width": 1080,
+    "masked": false,
+    "elapsedMillis": 6258,
+    "readable": true,
+    "detail": "POWER: level='Lva184' parsed=184 markerProof=184, cost='2.621'; SPEED: level='Lvs185' parsed=185 markerProof=185, cost='3.62i'; MONEY: level='Lva186' parsed=186 markerProof=186, cost='4.99i'",
+    "rawText": "Power\nLva184\n1016\n2.621\nSpeed\nLvs185\n1580\n3.62i\nMoney\nLva186\n007b\n4.99i"
+  },
+  {
+    "fixture": "available",
+    "width": 1080,
+    "masked": true,
+    "elapsedMillis": 5701,
+    "readable": true,
+    "detail": "POWER: level='Lva184' parsed=184 markerProof=184, cost='2.62i'; SPEED: level='Lvs185' parsed=185 markerProof=185, cost='3.62i'; MONEY: level='Lva186' parsed=186 markerProof=186, cost='4.99i'",
+    "rawText": "Power\nLva184\n2.62i\nSpeed\nLvs185\n3.62i\nMoney\nLva186\n4.99i"
+  },
+  {
+    "fixture": "power-unavailable",
+    "width": 570,
+    "masked": false,
+    "elapsedMillis": 5642,
+    "readable": true,
+    "detail": "POWER: level='Lv.197' parsed=197 markerProof=null, cost='172i'; SPEED: level='Lv.185' parsed=185 markerProof=null, cost='3.62i'; MONEY: level='LVo186' parsed=186 markerProof=null, cost='4.99i'",
+    "rawText": "Power\nLv.197\n264b\n172i\nSpeed\nLv.185\n1580\n3.62i\nMoney\nLVo186\n0076\n4.99i"
+  },
+  {
+    "fixture": "power-unavailable",
+    "width": 570,
+    "masked": true,
+    "elapsedMillis": 5382,
+    "readable": true,
+    "detail": "POWER: level='Lv.197' parsed=197 markerProof=null, cost='172i'; SPEED: level='Lv185' parsed=185 markerProof=null, cost='3.62i'; MONEY: level='LVo186' parsed=186 markerProof=null, cost='4.99i'",
+    "rawText": "Power\nLv.197\n172i\nSpeed\nLv185\n3.62i\nMoney\nLVo186\n4.99i"
+  },
+  {
+    "fixture": "power-unavailable",
+    "width": 1080,
+    "masked": false,
+    "elapsedMillis": 5986,
+    "readable": false,
+    "detail": "Missing/ambiguous MONEY level. POWER: level='Lu.197' parsed=197 markerProof=197, cost='172i'; SPEED: level='Lvs185' parsed=185 markerProof=185, cost='3.62i'; MONEY: level='MoneyLva186' parsed=null markerProof=null, cost='4.99i'",
+    "rawText": "Power\nLu.197\n264b\n172i\nSpeed\nLvs185\n1580\n3.62i\nMoney\nLva186\n007b\n4.99i"
+  },
+  {
+    "fixture": "power-unavailable",
+    "width": 1080,
+    "masked": true,
+    "elapsedMillis": 6238,
+    "readable": true,
+    "detail": "POWER: level='Lu.197' parsed=197 markerProof=197, cost='172i'; SPEED: level='Lus185' parsed=185 markerProof=185, cost='3.62i'; MONEY: level='Lva186' parsed=186 markerProof=186, cost='4.99i'",
+    "rawText": "Power\nLu.197\n172i\nSpeed\nLus185\n3.62i\nMoney\nLva186\n4.99i"
+  },
+  {
+    "fixture": "available",
+    "width": 570,
+    "productionWorker": true,
+    "elapsedMillis": 7031,
+    "readable": true,
+    "detail": "OCR work=7031 ms. POWER: level='Lvo184' parsed=184 markerProof=null, cost='2.62i'; SPEED: level='Lva185' parsed=185 markerProof=185, cost='3.62i'; MONEY: level='Lv.186' parsed=186 markerProof=null, cost='4.99i'",
+    "copyMillis": 109,
+    "sdkMillis": 6883,
+    "parseMillis": 38,
+    "mainQueueMillis": 1,
+    "workerPriority": -1
+  }
+]

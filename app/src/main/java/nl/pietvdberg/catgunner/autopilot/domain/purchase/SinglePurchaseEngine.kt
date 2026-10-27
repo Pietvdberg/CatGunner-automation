@@ -6,7 +6,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import nl.pietvdberg.catgunner.autopilot.domain.safety.PurchaseCurrency
 import nl.pietvdberg.catgunner.autopilot.domain.safety.SpendingPolicy
 import nl.pietvdberg.catgunner.autopilot.domain.state.ActionLease
-import nl.pietvdberg.catgunner.autopilot.vision.RecheckStatus
 import nl.pietvdberg.catgunner.autopilot.vision.UpgradeKind
 import nl.pietvdberg.catgunner.autopilot.vision.UpgradeTextParser
 
@@ -62,6 +61,7 @@ class SinglePurchaseEngine(private val clock: () -> Long) {
     private var completedAt = Long.MAX_VALUE
     private var lastVerificationAt = -1L
     private var confirmations = 0
+    private var verifiedFrame: GameReading? = null
 
     @Synchronized
     fun arm(
@@ -80,6 +80,7 @@ class SinglePurchaseEngine(private val clock: () -> Long) {
         profile = calibration.copy(targets = calibration.targets.toMap())
         lease = actionLease
         previous = null
+        verifiedFrame = null
         before = null
         confirmations = 0
         completedAt = Long.MAX_VALUE
@@ -96,6 +97,15 @@ class SinglePurchaseEngine(private val clock: () -> Long) {
             timing = PurchaseTiming(requestedAt ?: clock(), clock())
         )
         return true
+    }
+
+    /** One-use handoff of an actual accepted final verification frame, with its original timestamp. */
+    @Synchronized
+    fun takeVerifiedFrame(id: String): GameReading? {
+        if (report.value.id != id || report.value.phase != PurchasePhase.VERIFIED) return null
+        val frame = verifiedFrame
+        verifiedFrame = null
+        return frame
     }
 
     @Synchronized
@@ -163,8 +173,7 @@ class SinglePurchaseEngine(private val clock: () -> Long) {
         workMillis: Long,
         frameAgeMillis: Long,
         readable: Boolean,
-        pixelRecheck: Boolean = false,
-        recheckStatus: RecheckStatus? = null
+        stages: OcrStages? = null
     ) {
         val timing = report.value.timing ?: return
         if (!active() || report.value.id != id || capturedAt < timing.armedAt) return
@@ -175,8 +184,7 @@ class SinglePurchaseEngine(private val clock: () -> Long) {
             frameAgeMillis,
             readable,
             maximumReadingAgeMillis(),
-            pixelRecheck,
-            recheckStatus
+            stages
         )
         mutableReport.value = report.value.copy(
             timing = if (afterCall) {
@@ -414,6 +422,7 @@ class SinglePurchaseEngine(private val clock: () -> Long) {
             detail = "Tap sent; level ${old.level} → ${next.level} observed $confirmations/2."
         )
         if (confirmations >= 2) {
+            verifiedFrame = reading.copy(upgrades = reading.upgrades.toMap())
             mutableReport.value = report.value.copy(after = next)
             finish(PurchasePhase.VERIFIED, "One level increase verified twice. Test complete.")
         }

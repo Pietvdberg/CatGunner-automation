@@ -17,6 +17,7 @@ import nl.pietvdberg.catgunner.autopilot.data.PreviewStore
 import nl.pietvdberg.catgunner.autopilot.data.PurchaseJournal
 import nl.pietvdberg.catgunner.autopilot.data.PurchaseRuntime
 import nl.pietvdberg.catgunner.autopilot.data.ReadingStore
+import nl.pietvdberg.catgunner.autopilot.data.ReceiptRecorder
 import nl.pietvdberg.catgunner.autopilot.domain.purchase.DispatchBlock
 import nl.pietvdberg.catgunner.autopilot.domain.purchase.DispatchGuard
 import nl.pietvdberg.catgunner.autopilot.domain.purchase.DispatchSnapshot
@@ -24,7 +25,6 @@ import nl.pietvdberg.catgunner.autopilot.domain.purchase.GameReading
 import nl.pietvdberg.catgunner.autopilot.domain.purchase.PurchasePhase
 import nl.pietvdberg.catgunner.autopilot.domain.state.AutoPilotSession
 import nl.pietvdberg.catgunner.autopilot.vision.BanknoteMatcher
-import nl.pietvdberg.catgunner.autopilot.vision.OcrContext
 import nl.pietvdberg.catgunner.autopilot.vision.PixelSource
 import nl.pietvdberg.catgunner.autopilot.vision.UpgradeKind
 import nl.pietvdberg.catgunner.autopilot.vision.UpgradeOcr
@@ -44,6 +44,7 @@ class PurchasePipeline(private val context: Context) : AutoCloseable {
     private val controller = AutoPilotSession.controller
     private val engine = PurchaseRuntime.engine
     private var lastRecognizedAt = -1L
+    private var lastUnknownAt = -1L
     private var closed = false
     private var ocrSamples = 0L
     private var readableSamples = 0L
@@ -66,7 +67,7 @@ class PurchasePipeline(private val context: Context) : AutoCloseable {
         }
         LiveDiagnostics.game(evidence)
         if (!evidence.recognized) {
-            ocr.invalidate()
+            lastUnknownAt = capturedAt
             engine.waitForEvidence("Upgrade controls: ${LiveDiagnostics.describe(evidence)}")
             return
         }
@@ -79,12 +80,13 @@ class PurchasePipeline(private val context: Context) : AutoCloseable {
         val banknoteMatches = UpgradeKind.entries
             .associateWith { banknote.matches(pixels, it) }
         latestBanknoteMatches = banknoteMatches
-        ocr.sample(pixels, evidence, OcrContext(actionLease, version), capturedAt) { result ->
+        ocr.sample(pixels, evidence, active = PurchaseRuntime.purchasing()) { result ->
             val ageMillis = SystemClock.elapsedRealtime() - capturedAt
             ocrSamples++
             if (result.upgrades != null) readableSamples++
             LiveDiagnostics.ocr(
-                "Result age (ms): $ageMillis. Readable=$readableSamples/$ocrSamples. ${result.detail}"
+                "Result age (ms): $ageMillis. Readable=$readableSamples/$ocrSamples. " +
+                    result.detail
             )
             val upgrades = result.upgrades
             if (closed ||
@@ -99,8 +101,7 @@ class PurchasePipeline(private val context: Context) : AutoCloseable {
                 result.workMillis,
                 ageMillis,
                 upgrades != null,
-                result.pixelRecheck,
-                result.recheckStatus
+                result.stages
             )
             val callbackForeground = GameAccessibilityService.instance?.foregroundStatus()
                 ?: ForegroundStatus.DISCONNECTED
@@ -129,6 +130,7 @@ class PurchasePipeline(private val context: Context) : AutoCloseable {
             val kind = engine.report.value.kind
             val reading = candidate.copy(banknoteIconsMatched = banknoteMatches[kind] == true)
             ReadingStore.update(reading)
+            val enteringPhase = engine.report.value.phase
             engine.onReading(reading) { id, lease, point ->
                 val request = engine.report.value
                 scope.launch {
@@ -183,16 +185,20 @@ class PurchasePipeline(private val context: Context) : AutoCloseable {
                                 id,
                                 request.dispatchAttempt
                             ) {
-                                ocr.invalidate()
-                                val accepted = GameAccessibilityService.instance?.tapOnce(
-                                    point.x * nativeWidth,
-                                    point.y * nativeHeight
-                                ) { succeeded ->
-                                    LiveDiagnostics.dispatch(
-                                        "Android gesture callback: completed=$succeeded"
-                                    )
-                                    engine.gestureCompleted(id, succeeded, request.dispatchAttempt)
-                                } == true
+                                val accepted =
+                                    GameAccessibilityService.instance?.tapOnce(
+                                        point.x * nativeWidth,
+                                        point.y * nativeHeight
+                                    ) { succeeded ->
+                                        LiveDiagnostics.dispatch(
+                                            "Android gesture callback: completed=$succeeded"
+                                        )
+                                        engine.gestureCompleted(
+                                            id,
+                                            succeeded,
+                                            request.dispatchAttempt
+                                        )
+                                    } == true
                                 LiveDiagnostics.dispatch(
                                     "Gesture service accepted=$accepted; target=$kind"
                                 )
@@ -215,12 +221,25 @@ class PurchasePipeline(private val context: Context) : AutoCloseable {
                 }
                 true
             }
+            val completed = engine.report.value
             PurchaseRuntime.autoRunner.reconcile()
+            if (enteringPhase == PurchasePhase.VERIFYING &&
+                completed.phase == PurchasePhase.VERIFIED
+            ) {
+                ReceiptRecorder.record(context, completed)
+                val handoff = PurchaseRuntime.autoRunner.prepareVerifiedHandoff(
+                    controller.observationLease(),
+                    banknoteMatches
+                )
+                if (handoff != null) {
+                    engine.onReading(handoff) { _, _, _ -> false }
+                    PurchaseRuntime.autoRunner.reconcile()
+                }
+            }
         }
     }
 
     private fun foregroundLost(reason: String) {
-        ocr.invalidate()
         PurchaseRuntime.autoRunner.foregroundLost(reason)
         if (engine.report.value.phase == PurchasePhase.ARMED) {
             engine.waitForEvidence(reason)

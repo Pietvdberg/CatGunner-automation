@@ -190,3 +190,21 @@ the first observation or count as a new one. Actual unknown layout must still
 reset it. A pre-call gap over 1500 ms must require a new two-frame pair. Repeated
 incomplete text must not extend the readiness/verification deadlines. Foreground
 loss after a tap still means UNCONFIRMED and ends the run. No repeat gesture.
+
+## Native marker proof, worker stages and verified frame handoff (0.4.7)
+
+Build the main APK and read-only native probe APK. Run tools/run-ocr-probe.py on
+an owned emulator (see native-ocr-probe.md), checking expected levels and preserved
+raw OCR text. A small low dot plus matching visible digit count may resolve the
+fixed Lv. marker, but missing digits, tall punctuation or unknown headings must
+remain rejected. Test prices/suffixes independently; they are not repaired.
+Native probe time under software emulation is not phone latency.
+
+On the phone, compare identical bounded rules using numbered purchase timings.
+Inspect copy/SDK/parse/main averages, worker priority, readiness and verification.
+Each new step still requires two distinct complete source frames. Handoff of a
+just-verified frame may seed one precondition only, under the same run/lease and
+750 ms age; unknown UI since the capture invalidates it. Stale handoffs fall back
+to new frames. Currency, changed profiles, cap completion and a new run must block
+inappropriate reuse. Verify terminal receipts survive immediate rearming and
+normal Stop. Unknown screens and foreground loss still stop/block as before.

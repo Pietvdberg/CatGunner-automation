@@ -1,7 +1,6 @@
 package nl.pietvdberg.catgunner.autopilot.domain.purchase
 
 import nl.pietvdberg.catgunner.autopilot.domain.state.ActionLease
-import nl.pietvdberg.catgunner.autopilot.vision.RecheckStatus
 import nl.pietvdberg.catgunner.autopilot.vision.UpgradeKind
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -668,27 +667,27 @@ class SinglePurchaseEngineTest {
     }
 
     @Test
-    fun pixelRechecksStillRequireDistinctFramesBeforeAndAfterOneActualCall() {
+    fun recognitionStillRequiresDistinctFramesBeforeAndAfterOneActualCall() {
         arm()
         val id = engine.report.value.id
         engine.recordOcr(id, now, 600, 610, true)
         feed(advance = false)
-        engine.recordOcr(id, now, 3, 3, true, pixelRecheck = true)
+        engine.recordOcr(id, now, 3, 3, true, stages = OcrStages(1, 1, 0, 1, -1))
         feed(advance = false)
         assertEquals(0, dispatches)
         feed()
         assertEquals(1, dispatches)
         engine.gestureCompleted(id, true)
         feed(level = 11)
-        engine.recordOcr(id, now, 3, 3, true, pixelRecheck = true)
+        engine.recordOcr(id, now, 3, 3, true, stages = OcrStages(1, 1, 0, 1, -1))
         feed(level = 11, advance = false)
         assertEquals(PurchasePhase.VERIFYING, engine.report.value.phase)
         feed(level = 11)
         assertEquals(PurchasePhase.VERIFIED, engine.report.value.phase)
         val stats = engine.report.value.timing!!.beforeOcr
-        assertEquals(1L, stats.pixelRechecks)
-        assertEquals(600L, stats.totalWorkMillis)
-        assertTrue(stats.describe().contains("native OCR avg/max=600/600"))
+        assertEquals(1L, stats.profiledSamples)
+        assertEquals(603L, stats.totalWorkMillis)
+        assertTrue(stats.describe().contains("OCR avg/max=301/600"))
     }
 
     @Test
@@ -765,14 +764,11 @@ class SinglePurchaseEngineTest {
     }
 
     @Test
-    fun cacheRejectionsAndRecentDeferralReasonsSurviveInThePurchaseTiming() {
+    fun stageTimingsAndRecentDeferralReasonsSurviveInThePurchaseTiming() {
         arm()
         val id = engine.report.value.id
-        engine.recordOcr(id, now, 600, 600, true, recheckStatus = RecheckStatus.TOKEN_BOUNDS)
-        assertEquals(
-            1L,
-            engine.report.value.timing!!.beforeOcr.cacheRejects[RecheckStatus.TOKEN_BOUNDS]
-        )
+        engine.recordOcr(id, now, 600, 600, true, stages = OcrStages(10, 500, 40, 50, -1))
+        assertEquals(500L, engine.report.value.timing!!.beforeOcr.sdkMillis)
         repeat(5) { index ->
             now += 250
             engine.onReading(reading()) { _, _, _ -> error("Only one frame") }
@@ -785,6 +781,23 @@ class SinglePurchaseEngineTest {
         assertEquals(4, timing.deferralReasons.size)
         assertTrue(timing.deferralReasons.first().contains("Block 1"))
         assertEquals(0, dispatches)
+    }
+
+    @Test
+    fun onlyAnActuallyVerifiedFrameCanBeConsumedOnceForHandoff() {
+        dispatchOnce()
+        val id = engine.report.value.id
+        assertEquals(null, engine.takeVerifiedFrame(id))
+        engine.gestureCompleted(id, true)
+        feed(level = 11)
+        assertEquals(null, engine.takeVerifiedFrame(id))
+        feed(level = 11)
+        assertEquals(null, engine.takeVerifiedFrame("another request"))
+        val frame = engine.takeVerifiedFrame(id)!!
+        assertEquals(now, frame.capturedAt)
+        assertEquals(11, frame.upgrades.getValue(UpgradeKind.POWER).level)
+        assertEquals(null, engine.takeVerifiedFrame(id))
+        assertEquals(1, dispatches)
     }
 
     private fun arm() {

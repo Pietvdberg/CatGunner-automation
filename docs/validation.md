@@ -301,3 +301,63 @@ the exact old cache/preparation block. There is no measured phone speedup for
 
 Signature, unchanged certificate, version code 13 and 16 KiB ZIP alignment verified.
 ZIP and standalone APK bytes match. APK SHA-256: `0e46857f68eaf1e6d1a866a296168cd9976e74d41753f3b692f1e154f0dca19c`.
+
+## 0.4.7 native marker proof, dedicated worker and one-use verified-frame handoff
+
+Ran `tools/cloud-gradle.sh -PsplitApks assembleDebug assembleDebugAndroidTest
+ testDebugUnitTest lintDebug ktlintCheck`: all passed. 155 JVM tests executed,
+zero failures/errors/skips. Removed 13 retired exact-cache tests. Added tests for
+four-stage timing, negative intervals/missing profiles, image-backed dot recovery,
+missing/ambiguous digits, tall false punctuation, empty/invalid rasters, merged
+control heading identity, matching-heading token filtering, a one-use actual
+verified frame, no tap from a single/duplicate handed-off frame, stale-source
+fallback, cap/new-run exclusion, renewed target banknote proof and invalidation
+by an unknown screen newer than the source capture. Existing source age,
+callback/verification deadlines, pause/stop, currency and cap tests pass.
+
+The full native strip, coordinate mapping and prices are unchanged. Raw text stays
+in diagnostics. Recovery applies only to the observed level-marker region: small
+baseline dot, plausible separate glyph geometry and exactly the number of ASCII
+digits the native model already recognized. No digit or suffix is invented.
+Generic unproven text such as Lva68 remains rejected. Known heading contamination
+is filtered only for its matching control. The ineffective RGB cache is removed.
+The SDK uses one dedicated worker with an optional own-thread scheduling hint;
+parsing occurs before the main-thread handoff. Busy frames are dropped before
+copying, idle OCR is throttled to 1 Hz, and active purchasing bypasses that idle
+throttle. Stage timing separates copy/SDK wait/parse/main queue; SDK wait includes
+internal scheduling/model initialization, not only inference.
+
+Native testing now executes the actual bundled ML Kit SDK on an owned headless
+API 30 x86_64 Android emulator, without /dev/kvm. It tests existing RGB footer
+fixtures at 570/reference and nearest-neighbor enlarged 1080 widths. Evidence is
+in docs/native-ocr/: baseline.json (8 cases), marker-proof.json (8 cases plus the
+production worker) and final-heading.json (unmasked unavailable 1080 case plus
+production worker). The baseline reproduced Lv separator errors. Pixel proof
+recovers recognized digits in Lva184, Lvs185, Lu.197 and related cases; the final
+unmasked unavailable case reads levels 197/185/186 and costs 172i/3.62i/4.99i.
+The production worker reports priority -1 and all four stage intervals. A test-
+only masking variant still fails one fixture, so masking is not enabled. One
+synthetically enlarged available fixture still reads price 2.621 instead of
+2.62i; prices are not corrected, and mixed-unit selection remains blocked.
+These are native recognition checks, not Pixel 10 timing or exhaustive accuracy
+validation. Software emulator wall times/cold loading are not comparable to the
+phone. CI compiles the diagnostic APK but does not claim native execution there.
+The transport helper refuses physical devices and uses one local emulator link.
+
+Automatic steps can consume the last actual VERIFIED numeric frame once, retaining
+its original capture time, only for the same run/receipt and observation lease,
+within 750 ms and newer than the latest unknown screen. This seeds one observation;
+a distinct newer complete frame and that target's banknote proof are required
+before a tap. No timestamp refresh, predicted level, batch gesture or implicit
+resume is used. Stale sources return to normal acquisition. A captured terminal
+receipt is submitted to the process-scoped writer before immediate rearming can
+conflate the old flow event. All original final-send and financial gates remain.
+
+Owner 0.4.6 evidence establishes completed 3/3 in 25.341 seconds and 5/5 in 21.166
+seconds, with negligible cache reuse and intermittent incomplete OCR. There is no
+measured Pixel 10 improvement for 0.4.7 yet. Native live rendering, throughput,
+interruption behavior, storage/lifecycle integration and sustained battery/thermal
+impact need phone validation. Calibration schema and signing identity are retained.
+
+Signature, unchanged certificate, version code 14 and 16 KiB ZIP alignment verified.
+ZIP and standalone APK bytes match. APK SHA-256: `048db40d28eb88ee28309e9ae93295199f7dd5b066cf67b7b7d331754919981a`.

@@ -7,11 +7,24 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.distinctUntilChangedBy
 import kotlinx.coroutines.launch
 import nl.pietvdberg.catgunner.autopilot.domain.purchase.PurchasePhase
+import nl.pietvdberg.catgunner.autopilot.domain.purchase.PurchaseReport
 
 /** Process-scoped writer survives capture-service stop; no jobs or gestures resume on restart. */
 object ReceiptRecorder {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var installed = false
+
+    /** Capture a terminal receipt before a same-callback handoff can conflate its StateFlow event. */
+    fun record(context: Context, report: PurchaseReport) {
+        val journal = PurchaseJournal(context.applicationContext)
+        scope.launch {
+            try {
+                journal.append(report)
+            } catch (_: Exception) {
+                PurchaseRuntime.engine.unsafe("Local receipt storage failed. No retry.")
+            }
+        }
+    }
 
     @Synchronized
     fun start(context: Context) {

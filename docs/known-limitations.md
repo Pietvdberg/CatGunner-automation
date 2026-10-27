@@ -1,83 +1,37 @@
 # Known limitations
 
-Version 0.4.1 is a bounded automatic-purchase prototype, not the complete MVP.
-The owner validated Power, Speed and Money single purchases on Pixel 10 / Android
-16 at 1080×2424, each showing VERIFIED 2/2. See phone-validation.md. The new run
-orchestration is cloud tested but still needs handset validation.
+0.4.7 needs Pixel 10 latency, native rendering and sustained thermal/battery
+validation. Native fixture probing runs on an unaccelerated API 30 x86_64 emulator;
+its wall times cannot be compared to the phone. Fixture JPEG crops and their
+nearest-neighbor enlargement are not native phone captures. A dedicated SDK
+executor/scheduling hint does not guarantee priority or latency on every device.
+The reported SDK stage includes internal scheduling, model work and cold loading.
 
-Automatic runs require an explicit start and cap at five actions, default three.
-Each prior action must verify before another can be armed. Lowest-price selection
-only compares exact decimals with identical suffixes. Rotation does not compare
-price magnitude. Neither rule estimates expected progress gain, opportunity cost,
-income or DPS. Reserve/spend-amount policies and unknown suffix scales are not
-implemented. Expected-gain optimization and Rebirth Rush remain future milestones.
+The `Lv.` separator recovery is limited to the observed footer and white glyphs.
+It requires a low small dot, separate plausible glyph geometry and an exact match
+between the visible digit count and already-recognized ASCII digits. Ambiguity
+still produces no reading. The generic parser and price suffixes are not guessed.
+Native OCR can still misread a numeric value or suffix; two complete observations
+and exact one-level-change checks remain necessary. Only green banknotes are
+permitted. Gems, unknown currencies and real money remain forbidden.
 
-Unavailable Speed/Money, rebirth, dialogs, loading states and native captures need
-more corpus coverage. The screenshot-derived classifier is incomplete: custom
-in-game dialogs entirely outside its visual regions may go unnoticed. Unknown
-controls/OCR and stale frames block dispatch; native competing windows, loss of
-foreground/accessibility, pause and stop end a run. This is not evidence of
-comprehensive game-screen understanding or readiness for unattended operation.
+The six-field OCR layout and exact RGB cache experiments were removed. Full-strip
+input is retained, with no production masking, resizing or packing. The native
+probe contains test-only masking comparisons; those do not ship in the main APK.
+The app samples active visuals at up to 10 Hz; native tasks remain single-flight.
+Idle OCR is limited to 1 Hz. No parallel inference or frame/job backlog is used.
 
-OCR does not reconstruct unreadable digits. It accepts the observed period-as-o
-separator only after the fixed Lv prefix. After a tap, invalid frames can wait
-within an eight-second verification window, without another gesture. Two distinct
-post-completion readings must show exactly one selected level increase with
-matching cost text and unchanged other upgrade levels. A callback alone is never
-purchase success. UNCONFIRMED means a purchase may already have occurred; review
-the game before any new test or run. There is no rollback.
+The visual profile is limited to the owner's portrait game layout and is not a
+complete dialog classifier. Device dimensions/game version changes invalidate
+saved calibration. Unavailable Speed/Money and custom dialogs need more evidence.
+Expected upgrade benefit, suffix scales, reserve policy and Rebirth Rush remain
+future work. Automatic runs are explicitly started and capped at five; returning
+to the app, losing the game foreground, Pause/Stop or uncertainty ends a run.
+Resume only resumes observation. A sent action has no rollback or automatic retry.
 
-A retained historical preview survives app switching and pause for inspection;
-it is never an action precondition. Only geometry and bounded receipts are saved.
-Process death loses preview, pending run state and its in-process review gate.
-No request resumes automatically. Device/game changes invalidate calibration.
-Capture tokens require renewed Android consent after stopping.
-
-Green banknotes only. Gems, unknown currencies and real money remain forbidden.
-The bundled OCR model runs locally, and network permissions are removed from the
-merged manifest. No sustained-session, battery/thermal, action-latency percentile
-or rebirth-recovery performance claims have been established.
-
-The owner observed partial 0.4.0 runs (2/3 before foreground cancellation, 1/5
-before a no-send failure). 0.4.1 addresses the queue-to-send transient evidence
-gap and diagnostic ambiguity without relaxing the 750 ms pre-action limit or
-retrying actual gestures. These changes are cloud validated only. The exact
-original final-gate failure is not established by the supplied screenshots;
-new diagnostics expose it if it persists.
-
-The owner subsequently confirmed a complete 5/5 lowest-comparable-price run on
-0.4.1 (135726.jpg), while reporting slow operation. 0.4.2 uses six native text
-crops, skips preview copying during purchases and samples active frames faster.
-Its cloud-tested geometry does not establish native MLKit accuracy or speed.
-Run duration and OCR work time are now displayed for phone comparison. The
-higher active sampling rate needs battery/thermal validation; idle remains 4 Hz.
-
-0.4.3 adds per-purchase monotonic milestones and before/after-call OCR aggregates,
-including terminal failures. These expose trends but do not identify a cause of
-progressive latency without phone measurements. Active-run rows are retained only
-until a new run/process death; the bounded receipt journal saves terminal timing
-milestones. A run stopped before any request is armed has no purchase row.
-
-0.4.3 owner evidence (135728.jpg) shows 0/28 readable OCR results and no armed
-purchase. 0.4.4 removes the six-field atlas and restores the original 0.4.1 strip
-input and mapping. Geometric unit tests did not establish native MLKit accuracy;
-the crop experiment failed that phone validation. Per-purchase diagnostics remain.
-The restored combination still needs phone validation before any speed claim.
-
-0.4.5 reduces repeated inference using exact current-pixel equality with a recent
-complete OCR source. It may miss frequently when animation touches watched text
-regions; that costs performance and forces unchanged full-strip OCR. Cloud tests
-cannot establish live hit rate or phone latency. The complete OCR interpretation
-is not independently inferred again for a pixel-identical confirmation frame;
-verification uses a fresh frame with identical watched text and renewed visual,
-currency, foreground, session and freshness checks. Two distinct post-call frames
-must still show exactly one level increase. New text always needs native OCR.
-
-Owner 0.4.5 evidence shows rare cache hits and continued 5–9.6 second steps, with
-four VERIFIED and one UNCONFIRMED after foreground loss. 0.4.6 narrows exact
-comparison and stops partial OCR from discarding prior valid evidence. It retains
-two distinct complete observations; they need not be adjacent successful OCR
-calls if only incomplete text intervenes. Unknown actual layout still resets.
-There is no measured phone improvement for this update. Cache rejection enums
-and retained deferral reasons expose remaining misses rather than establishing a
-cause from timing alone. Full-strip native OCR and the manual review gate remain.
+UNCONFIRMED means a purchase may already have occurred; inspect before starting
+again. Its review gate and run history are in-process and are lost on process
+death. No pending request or run is restored. Only geometry and bounded numeric
+receipts are saved; retained preview pixels live in memory and never serve as
+live purchase preconditions. Capture after Stop requires fresh Android consent.
+The bundled model operates offline with network permissions removed.

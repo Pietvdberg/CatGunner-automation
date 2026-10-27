@@ -103,3 +103,21 @@ and queue-deferral reasons. The larger old regions included non-text areas, but
 this screenshot alone does not prove which cache-admission gate dominated. There
 is no new phone timing result yet. The fifth upgrade may already have occurred;
 no automatic retry is permitted. Source SHA-256: `55e581c2b4fa1fde21c2fd748d31a0e3bedb6b0338ed458a9d291f46ba68a833`.
+
+## 0.4.6 completed runs remain too slow (135731.jpg / 135732.jpg)
+
+The lowest-comparable-price batch completed 3/3 in 25.341 seconds: 12092, 6310,
+6935 ms. The first request had 8997 ms readiness and 61 unknown observations;
+others had incomplete native levels, token-bound coverage failures and changing
+pixels. One preparation deferral is explicitly OCR_TOO_OLD at 862 ms.
+
+The rotation batch completed 5/5 in 21.166 seconds: 4638, 3889, 3287, 4794,
+4558 ms. It recorded zero pixel rechecks. Native OCR remains roughly 500–700 ms,
+with several incomplete readings. This establishes successful bounded operation,
+not acceptable speed, cache effectiveness or a cause for every unknown frame.
+0.4.7 retires caching, changes SDK scheduling, profiles stages and addresses the
+pixel-verifiable Lv. separator issue reproduced by the native fixture probe.
+No phone timing for 0.4.7 is available yet.
+
+- `1-135731.jpg` SHA-256: `b6b5c451c0812e30af8ef56c9057d824adb114ff825b9e0f55d0afd8f904543d`
+- `2-135732.jpg` SHA-256: `3323e492a5c4428faf8b15e768247ed9d0ae254a2163043e40f24f3617344cef`

@@ -1,4 +1,4 @@
-CatGunner AutoPilot 0.4.6 — Pixel 10 / Android 16
+CatGunner AutoPilot 0.4.7 — Pixel 10 / Android 16
 
 The APK is signed with the same development certificate as previous versions.
 It includes offline OCR. It does not disable or bypass Play Protect.
@@ -6,7 +6,7 @@ It includes offline OCR. It does not disable or bypass Play Protect.
 Ubuntu update (using the Platform-Tools folder from the previous installation):
   cd ~/Downloads
   ./platform-tools/adb devices
-  ./platform-tools/adb install -r ~/Downloads/AutoPilot-Pixel10-0.4.6.apk
+  ./platform-tools/adb install -r ~/Downloads/AutoPilot-Pixel10-0.4.7.apk
 
 Connect the unlocked phone over USB with USB debugging enabled; accept the
 phone's debugging prompt. Keep Play Protect enabled. If ADB reports an error,
@@ -84,3 +84,16 @@ remain. Pixel comparison excludes non-text background/icons, with exact equality
 and mandatory token-box coverage. Copy diagnostics now retains cache rejection
 counts and up to four preparation deferral reasons for each purchase. Phone speed
 and hit rate need testing. Inspect any UNCONFIRMED purchase before starting again.
+
+0.4.7 removes the ineffective pixel cache. Native OCR uses a dedicated worker,
+with result parsing off the main thread and idle work throttled. The same full
+strip image is used. Small Lv. marker errors can be accepted only after pixel
+geometry proves the dot and the recognized digit count; digits/prices are never
+reconstructed. Timing rows split copy/SDK/parse/main handoff and show worker
+priority. All currency, freshness, verification and run limits remain. Calibration
+is retained. Native fixture checks cannot establish actual Pixel 10 speed.
+
+Automatic purchase boundaries can reuse the final verified frame as ONE initial
+precondition, with its original timestamp and a 750 ms age limit. A newer second
+complete frame and that target's banknote proof are still required. This removes
+one redundant full OCR wait between verified purchases, without batching taps.

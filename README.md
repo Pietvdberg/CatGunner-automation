@@ -1,7 +1,7 @@
 # CatGunner AutoPilot
 
 Private, on-device Android assistant for Idle Cat Gunner (`com.Chodun.CatGunner`).
-Version 0.4.6 reduces unnecessary OCR restarts and narrows exact live-pixel rechecks in
+Version 0.4.7 uses a dedicated OCR worker and pixel-checked level-marker recovery in
 **bounded automatic purchasing**, with per-purchase timing retained. The owner has
 validated a complete five-purchase run on 0.4.1. Each run has a 1/3/5-purchase cap, with one verified action
 at a time. Expected-gain optimization and Rebirth Rush remain future milestones. Green banknotes
@@ -9,11 +9,11 @@ are the only permitted currency; gems, unknown currencies and real money are for
 
 ## Download on your phone or computer
 
-- **[Download Pixel 10 APK (17.2 MB)](https://github.com/Pietvdberg/CatGunner-automation/raw/refs/tags/v0.4.6/downloads/AutoPilot-Pixel10-0.4.6.apk)**
-- **[Download ZIP with APK and USB-install instructions (9.5 MB)](https://github.com/Pietvdberg/CatGunner-automation/raw/refs/tags/v0.4.6/downloads/AutoPilot-Pixel10-download.zip)**
+- **[Download Pixel 10 APK (17.2 MB)](https://github.com/Pietvdberg/CatGunner-automation/raw/refs/tags/v0.4.7/downloads/AutoPilot-Pixel10-0.4.7.apk)**
+- **[Download ZIP with APK and USB-install instructions (9.5 MB)](https://github.com/Pietvdberg/CatGunner-automation/raw/refs/tags/v0.4.7/downloads/AutoPilot-Pixel10-download.zip)**
 - [View installation instructions](downloads/INSTALL.txt) and [SHA-256 checksums](downloads/SHA256SUMS).
 
-These are signed 0.4.6 builds. Hosting on GitHub fixes
+These are signed 0.4.7 builds. Hosting on GitHub fixes
 file access; it does not remove Play Protect's installation block. A work computer
 can download the files without installing software. USB/ADB installation requires
 a computer on which you are allowed to run Android Platform-Tools.
@@ -244,7 +244,7 @@ Install over the current app; calibration remains saved. A run that cannot arm
 any purchase has no numbered purchase records; its latest OCR diagnostics still
 show the readability failure.
 
-## 0.4.5 avoids repeated OCR of identical text
+## 0.4.5 exact-pixel experiment (removed in 0.4.7)
 
 Full-strip OCR retains the working image layout. After a complete native reading,
 fresh game frames can reuse its interpretation only if every RGB pixel in all six
@@ -292,3 +292,41 @@ with elapsed times. This exposes the cause instead of losing it after a successf
 gesture callback. Native hit rate and end-to-end speed still need phone validation.
 An UNCONFIRMED tap may already have purchased an upgrade; inspect the game before
 starting a new run. Returning to another app still stops foreground-only operation.
+
+## 0.4.7 native OCR accuracy and scheduling
+
+Owner testing showed near-zero pixel reuse and continued multi-second actions.
+The cache is removed from the live path. Full-strip OCR retains its original native
+image and coordinates. A dedicated single worker runs the SDK with an optional
+modestly favorable Android scheduling hint, parses results off the main thread,
+and posts immutable results back to the existing session/dispatch guards. Only
+one OCR task can run; busy frames are discarded before pixel copying. Idle OCR
+runs at most once per second; an explicit purchase/run bypasses that idle throttle.
+The worker is closed with the recognizer after the in-flight image is released.
+
+A native Android fixture probe reproduced frequent `Lv.` marker errors such as
+`Lva184` and `Lvs185`, which previously discarded otherwise readable digits. The
+normalizer keeps the raw OCR text. Only on a known level field can native pixels
+prove a small low dot and the matching count of separate digit glyphs. The digit
+string itself is never edited. A missing digit (for example three visible digits
+but only `68` recognized), tall ambiguous glyph, merged numbers or unknown word
+is rejected. A merged control heading must match its actual control. The generic
+text parser remains strict and cannot accept these variants without pixel proof.
+No price or suffix correction, crop packing, masking or resizing is enabled.
+
+Per-purchase diagnostics now split OCR into copy, SDK wait, parsing and main-thread
+handoff averages, with SDK maximum and actual callback-thread priority. SDK time
+includes its internal scheduling/model work; it is not a pure inference profiler.
+Two distinct complete pre/post frames, unknown-screen resets, financial checks,
+original deadlines and bounded runs remain. Native fixtures validate recognition
+behavior, not Pixel 10 speed. Phone latency and thermal impact need measurement.
+The test-only native harness and instructions are in docs/native-ocr-probe.md.
+
+Between automatic purchases, the last actual VERIFIED frame may seed the next
+request once, retaining its original timestamp. It must still be within 750 ms,
+come from this same run/request and capture lease, and be newer than any unknown
+screen. The next tap requires a different newer complete reading and renewed
+banknote checks for its own target. Stale frames fall back to normal acquisition;
+cap completion, another run, pause/stop and unknown UI cannot reuse that snapshot.
+Terminal receipts are explicitly captured before the immediate handoff so they
+cannot be lost to StateFlow conflation. No frame timestamp is refreshed or invented.

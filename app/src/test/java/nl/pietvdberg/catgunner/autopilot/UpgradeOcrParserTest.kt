@@ -100,6 +100,23 @@ class UpgradeOcrParserTest {
         assertEquals(1, dispatches)
     }
 
+    @Test
+    fun onlyTheMatchingControlHeadingCanBeExcludedFromALevelRegion() {
+        val moneyX = 150f + 2 * 169
+        val withHeading = UpgradeOcrParser.parse(
+            tokens() +
+                UpgradeOcrToken("Money", moneyX, 1164f),
+            evidence
+        )
+        assertEquals(186, withHeading.upgrades?.get(UpgradeKind.MONEY)?.level)
+        val wrongHeading = UpgradeOcrParser.parse(
+            tokens() +
+                UpgradeOcrToken("Power", moneyX, 1164f),
+            evidence
+        )
+        assertNull(wrongHeading.upgrades)
+    }
+
     private fun tokens(): List<UpgradeOcrToken> = UpgradeKind.entries.flatMap { kind ->
         val offset = kind.ordinal * 169
         listOf(

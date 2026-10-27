@@ -1,41 +1,51 @@
 package nl.pietvdberg.catgunner.autopilot.vision
 
 import android.graphics.Bitmap
+import android.os.Handler
+import android.os.Looper
+import android.os.Process
 import android.os.SystemClock
 import com.google.mlkit.common.MlKitException
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
+import java.util.concurrent.Executor
+import java.util.concurrent.Executors
+import nl.pietvdberg.catgunner.autopilot.domain.purchase.OcrStages
 
-/** Offline, single-flight OCR of the native strip from the phone-validated 0.4.1 build. */
+/** One native task at a time. Borrowed pixels are copied before the Image is released. */
 class UpgradeOcr : AutoCloseable {
-    private val recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
-    private val cache = ExactTextCache()
+    private val worker = Executors.newSingleThreadExecutor { job ->
+        Thread({
+            try {
+                Process.setThreadPriority(Process.THREAD_PRIORITY_MORE_FAVORABLE)
+            } catch (_: SecurityException) {
+                // Scheduling hints are optional; recognition and all purchase guards still apply.
+            }
+            job.run()
+        }, "autopilot-ocr")
+    }
+    private val recognizer = TextRecognition.getClient(
+        TextRecognizerOptions.Builder().setExecutor(worker).build()
+    )
+    private val main = Handler(Looper.getMainLooper())
+    private val direct = Executor { it.run() }
     private var busy = false
     private var closed = false
+    private var resourcesClosed = false
+    private var lastStartedAt = -1000L
 
     fun sample(
         pixels: PixelSource,
         evidence: UpgradePanelEvidence,
-        context: OcrContext,
-        capturedAt: Long,
+        active: Boolean = true,
         completed: (UpgradeOcrResult) -> Unit
     ): Boolean {
-        if (closed) return false
+        if (busy || closed) return false
         val startedAt = SystemClock.elapsedRealtime()
-        val textPixels = TextPixels.capture(pixels)
-        val reused = cache.observe(textPixels, context, capturedAt)
-        if (reused != null) {
-            completed(
-                reused.withCurrentAppearance(evidence).copy(
-                    workMillis = SystemClock.elapsedRealtime() - startedAt
-                )
-            )
-            return true
-        }
-        if (busy) return false
+        if (!active && startedAt - lastStartedAt < 1000) return false
         busy = true
-        val sourceEpoch = cache.epoch
+        lastStartedAt = startedAt
         val frameWidth = pixels.width
         val frameHeight = pixels.height
         val top = (1130L * frameHeight / 1280).toInt()
@@ -47,60 +57,57 @@ class UpgradeOcr : AutoCloseable {
             bottom - top,
             Bitmap.Config.ARGB_8888
         )
+        val sdkStartedAt = SystemClock.elapsedRealtime()
         try {
-            recognizer.process(InputImage.fromBitmap(bitmap, 0)).addOnCompleteListener { task ->
-                try {
-                    if (!closed) {
-                        val result = if (task.isSuccessful) {
-                            val elements = task.result.textBlocks.flatMap { it.lines }
-                                .flatMap { it.elements }
-                            val tokens = elements.mapNotNull { element ->
-                                val bounds = element.boundingBox ?: return@mapNotNull null
-                                BoundedOcrToken(
-                                    UpgradeOcrToken(
-                                        element.text,
-                                        bounds.exactCenterX() * 570 / frameWidth,
-                                        (top + bounds.exactCenterY()) * 1280 / frameHeight
-                                    ),
-                                    TextPixels.Region(
-                                        bounds.left,
-                                        top + bounds.top,
-                                        bounds.right,
-                                        top + bounds.bottom
-                                    )
-                                )
+            recognizer.process(
+                InputImage.fromBitmap(bitmap, 0)
+            ).addOnCompleteListener(direct) { task ->
+                val sdkFinishedAt = SystemClock.elapsedRealtime()
+                val priority = Process.getThreadPriority(Process.myTid())
+                val result = try {
+                    if (task.isSuccessful) {
+                        val tokens = task.result.textBlocks.flatMap { it.lines }
+                            .flatMap { it.elements }.mapNotNull { element ->
+                                NativeOcrToken.from(element, bitmap, top, frameHeight)
                             }
-                            val parsed = UpgradeOcrParser.parse(tokens.map { it.token }, evidence)
-                            cache.remember(
-                                textPixels,
-                                context,
-                                capturedAt,
-                                parsed,
-                                sourceEpoch,
-                                textPixels.covers(tokens)
-                            )
-                            parsed.copy(recheckStatus = cache.lastStatus)
-                        } else {
-                            val error = task.exception
-                            val code = (error as? MlKitException)?.errorCode
-                            UpgradeOcrResult(
-                                null,
-                                "OCR task: ${error?.javaClass?.simpleName}, code=$code"
-                            )
-                        }
-                        val duration = SystemClock.elapsedRealtime() - startedAt
-                        completed(
-                            result.copy(
-                                detail = "OCR work=$duration ms; cache=${result.recheckStatus}. " +
-                                    result.detail,
-                                workMillis = duration
-                            )
+
+                        UpgradeOcrParser.parse(tokens, evidence)
+                    } else {
+                        val error = task.exception
+                        val code = (error as? MlKitException)?.errorCode
+                        UpgradeOcrResult(
+                            null,
+                            "OCR task: ${error?.javaClass?.simpleName}, code=$code"
                         )
                     }
-                } finally {
-                    bitmap.recycle()
-                    busy = false
-                    if (closed) recognizer.close()
+                } catch (error: RuntimeException) {
+                    UpgradeOcrResult(null, "OCR result: ${error.javaClass.simpleName}")
+                }
+                val parsedAt = SystemClock.elapsedRealtime()
+                main.post {
+                    val deliveredAt = SystemClock.elapsedRealtime()
+                    try {
+                        if (!closed) {
+                            val stages = OcrStages(
+                                sdkStartedAt - startedAt,
+                                sdkFinishedAt - sdkStartedAt,
+                                parsedAt - sdkFinishedAt,
+                                deliveredAt - parsedAt,
+                                priority
+                            )
+                            completed(
+                                result.copy(
+                                    detail = "OCR work=${stages.totalMillis} ms. ${result.detail}",
+                                    workMillis = stages.totalMillis,
+                                    stages = stages
+                                )
+                            )
+                        }
+                    } finally {
+                        bitmap.recycle()
+                        busy = false
+                        if (closed) closeResources()
+                    }
                 }
             }
         } catch (error: RuntimeException) {
@@ -117,13 +124,15 @@ class UpgradeOcr : AutoCloseable {
         return true
     }
 
-    fun invalidate() {
-        cache.invalidate()
-    }
-
     override fun close() {
         closed = true
-        cache.invalidate()
-        if (!busy) recognizer.close()
+        if (!busy) closeResources()
+    }
+
+    private fun closeResources() {
+        if (resourcesClosed) return
+        resourcesClosed = true
+        recognizer.close()
+        worker.shutdown()
     }
 }

@@ -12,9 +12,11 @@ android {
         applicationId = "nl.pietvdberg.catgunner.autopilot"
         minSdk = 26
         targetSdk = 36
-        versionCode = 13
-        versionName = "0.4.6-text-waits"
+        versionCode = 14
+        versionName = "0.4.7-ocr-worker"
+        testInstrumentationRunner = "nl.pietvdberg.catgunner.autopilot.probe.OcrProbe"
     }
+    sourceSets.getByName("androidTest").assets.srcDir("src/test/resources")
     splits {
         abi {
             isEnable = providers.gradleProperty("splitApks").isPresent

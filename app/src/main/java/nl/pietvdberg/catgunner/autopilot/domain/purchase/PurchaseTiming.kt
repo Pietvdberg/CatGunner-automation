@@ -1,54 +1,69 @@
 package nl.pietvdberg.catgunner.autopilot.domain.purchase
 
-import nl.pietvdberg.catgunner.autopilot.vision.RecheckStatus
+data class OcrStages(
+    val prepareMillis: Long,
+    val sdkMillis: Long,
+    val parseMillis: Long,
+    val mainQueueMillis: Long,
+    val workerPriority: Int?
+) {
+    init {
+        require(listOf(prepareMillis, sdkMillis, parseMillis, mainQueueMillis).all { it >= 0 })
+    }
+    val totalMillis: Long get() = prepareMillis + sdkMillis + parseMillis + mainQueueMillis
+}
 
-/** Bounded aggregates only; no frame history or per-frame disk writes. */
+/** Bounded per-request timing aggregates, without frame history or per-frame disk writes. */
 data class OcrTimingSummary(
     val samples: Long = 0,
-    val pixelRechecks: Long = 0,
-    val cacheRejects: Map<RecheckStatus, Long> = emptyMap(),
     val readable: Long = 0,
     val stale: Long = 0,
     val totalWorkMillis: Long = 0,
     val maximumWorkMillis: Long = 0,
-    val maximumFrameAgeMillis: Long = 0
+    val maximumFrameAgeMillis: Long = 0,
+    val profiledSamples: Long = 0,
+    val prepareMillis: Long = 0,
+    val sdkMillis: Long = 0,
+    val parseMillis: Long = 0,
+    val mainQueueMillis: Long = 0,
+    val maximumSdkMillis: Long = 0,
+    val workerPriority: Int? = null
 ) {
     fun add(
         workMillis: Long,
         frameAgeMillis: Long,
         isReadable: Boolean,
         ageLimit: Long,
-        pixelRecheck: Boolean = false,
-        recheckStatus: RecheckStatus? = null
+        stages: OcrStages? = null
     ) = copy(
-        cacheRejects = if (!pixelRecheck &&
-            recheckStatus != null &&
-            recheckStatus !in setOf(RecheckStatus.SEEDED, RecheckStatus.HIT)
-        ) {
-            cacheRejects + (recheckStatus to ((cacheRejects[recheckStatus] ?: 0L) + 1))
-        } else {
-            cacheRejects
-        },
         samples = samples + 1,
-        pixelRechecks = pixelRechecks + if (pixelRecheck) 1 else 0,
         readable = readable + if (isReadable) 1 else 0,
         stale = stale + if (frameAgeMillis !in 0..ageLimit) 1 else 0,
-        totalWorkMillis = totalWorkMillis + if (pixelRecheck) 0 else workMillis.coerceAtLeast(0),
-        maximumWorkMillis = if (pixelRecheck) {
-            maximumWorkMillis
-        } else {
-            maxOf(
-                maximumWorkMillis,
-                workMillis
-            )
-        },
-        maximumFrameAgeMillis = maxOf(maximumFrameAgeMillis, frameAgeMillis)
+        totalWorkMillis = totalWorkMillis + workMillis.coerceAtLeast(0),
+        maximumWorkMillis = maxOf(maximumWorkMillis, workMillis),
+        maximumFrameAgeMillis = maxOf(maximumFrameAgeMillis, frameAgeMillis),
+        profiledSamples = profiledSamples + if (stages == null) 0 else 1,
+        prepareMillis = prepareMillis + (stages?.prepareMillis ?: 0),
+        sdkMillis = sdkMillis + (stages?.sdkMillis ?: 0),
+        parseMillis = parseMillis + (stages?.parseMillis ?: 0),
+        mainQueueMillis = mainQueueMillis + (stages?.mainQueueMillis ?: 0),
+        maximumSdkMillis = maxOf(maximumSdkMillis, stages?.sdkMillis ?: 0),
+        workerPriority = stages?.workerPriority ?: workerPriority
     )
 
-    fun describe(): String = "readable=$readable/$samples, stale=$stale, " +
-        "pixel rechecks=$pixelRechecks; native OCR avg/max=" +
-        "${if (samples == pixelRechecks) "—" else totalWorkMillis / (samples - pixelRechecks)}/" +
-        "$maximumWorkMillis ms, max frame age=$maximumFrameAgeMillis ms; cache rejects=$cacheRejects"
+    fun describe(): String {
+        fun average(value: Long, count: Long): String = if (count == 0L) "—" else "${value / count}"
+        return "readable=$readable/$samples, stale=$stale; OCR avg/max=" +
+            "${average(totalWorkMillis, samples)}/$maximumWorkMillis ms; " +
+            "stages avg copy/SDK/parse/main=" +
+            "${average(prepareMillis, profiledSamples)}/${average(sdkMillis, profiledSamples)}/" +
+            "${average(
+                parseMillis,
+                profiledSamples
+            )}/${average(mainQueueMillis, profiledSamples)} ms; " +
+            "SDK max=$maximumSdkMillis ms; worker priority=$workerPriority; " +
+            "max frame age=$maximumFrameAgeMillis ms"
+    }
 }
 
 /** All milestones use elapsed realtime, never wall time. Missing stages stay unknown. */

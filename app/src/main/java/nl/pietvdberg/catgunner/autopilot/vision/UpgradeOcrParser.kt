@@ -1,34 +1,24 @@
 package nl.pietvdberg.catgunner.autopilot.vision
 
+import nl.pietvdberg.catgunner.autopilot.domain.purchase.OcrStages
 import nl.pietvdberg.catgunner.autopilot.domain.purchase.UpgradeReading
 
 /** Token centers are expressed in the observed 570x1280 reference layout. */
-data class UpgradeOcrToken(val text: String, val x: Float, val y: Float)
+data class UpgradeOcrToken(
+    val text: String,
+    val x: Float,
+    val y: Float,
+    val provenLevel: Int? = null
+)
 
 data class UpgradeOcrResult(
     val upgrades: Map<UpgradeKind, UpgradeReading>?,
     val detail: String,
     val workMillis: Long = 0,
-    val pixelRecheck: Boolean = false,
-    val recheckStatus: RecheckStatus? = null
-) {
-    fun withCurrentAppearance(evidence: UpgradePanelEvidence): UpgradeOcrResult {
-        if (!evidence.recognized) {
-            return copy(
-                upgrades = null,
-                detail = "Unknown current appearance"
-            )
-        }
-        return copy(
-            upgrades = upgrades?.mapValues { (kind, reading) ->
-                reading.copy(
-                    available = evidence.upgrades.first { it.kind == kind }.availability ==
-                        AvailabilityAppearance.AVAILABLE
-                )
-            }
-        )
-    }
-}
+    val stages: OcrStages? = null
+)
+
+enum class OcrField { LEVEL, COST }
 
 object UpgradeOcrParser {
     fun belongsTo(token: UpgradeOcrToken, kind: UpgradeKind, field: OcrField): Boolean {
@@ -48,11 +38,18 @@ object UpgradeOcrParser {
         for (kind in UpgradeKind.entries) {
             fun region(field: OcrField): String = tokens.filter { belongsTo(it, kind, field) }
                 .sortedBy { it.x }.joinToString("") { it.text }
-            val rawLevel = region(OcrField.LEVEL)
+            val levelTokens = tokens.filter {
+                belongsTo(it, kind, OcrField.LEVEL) && !it.text.equals(kind.name, ignoreCase = true)
+            }
+            val rawLevel = levelTokens.sortedBy { it.x }.joinToString("") { it.text }
             val rawCost = region(OcrField.COST)
-            val level = UpgradeTextParser.level(rawLevel)
+            val markerProof = levelTokens.singleOrNull()?.provenLevel
+            val level = UpgradeTextParser.level(rawLevel) ?: markerProof
             val cost = UpgradeTextParser.cost(rawCost)
-            details += "${kind.name}: level='${rawLevel.take(32)}' parsed=$level, " +
+            details +=
+                "${kind.name}: level='${rawLevel.take(
+                    32
+                )}' parsed=$level markerProof=$markerProof, " +
                 "cost='${rawCost.take(32)}'"
             if (level == null) missing += "${kind.name} level"
             if (cost == null) missing += "${kind.name} cost"

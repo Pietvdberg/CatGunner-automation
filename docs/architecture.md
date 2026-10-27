@@ -129,29 +129,37 @@ terminal purchase snapshots for display/copy, including interrupted requests.
 ReceiptRecorder filters duplicate event keys before I/O; notification collectors
 ignore timing-only report changes. The existing journal persists terminal timing.
 
-ExactTextCache retains one source-bound interpretation and native level/price
-patches in memory. Coverage validation requires every level/cost token box to fit
-its watched patch; completeness still comes from UpgradeOcrParser. Each current
-frame must match all six patches by IntArray content equality, dimensions,
-game version and observation lease. Fresh current-frame appearance/financial
-checks are independent. Rechecks do not update the original 2-second expiry.
-Unknown layout/foreground and actual calls invalidate the cache epoch, preventing
-late pending OCR from reseeding it. OCR completion can seed only if the latest
-observed text pixels still equal its source pixels. Both cache and native results
-flow through the same engine, which still requires distinct captured timestamps.
-RGBA bulk copies preserve the exact full-strip input and fall back on checked
-copies for unsupported strides or a missing final alpha byte. No raw frame buffer
-is retained beyond its Image lifetime. A bounded set of copied text patches lives
-in memory only. No per-frame disk writes or additional native OCR tasks are added.
-
 0.4.6 separates partial/stale text results (waitForText) from unknown actual UI
 (waitForEvidence). Partial text does not dispatch or count as verification; it
 retains valid observations within the original time bounds. A precondition pair
 more than 1500 ms apart is restarted with the new reading, never dispatched from
 the old one. Valid conflicting readings still fail/clear according to the normal
 engine rules. Unknown UI retains its existing reset/deferral behavior. No action
-deadline is extended. Narrower exact RGB regions (reference level x118–198,
-y1154–1179, price x94–179, y1219–1250, plus per-control offset) exclude surrounding
-icons and background. Token-box coverage remains mandatory for cache admission.
-Bounded enum-based cache reject counts and four deferral reasons live on each
+deadline is extended. Bounded enum-based cache reject counts and four deferral reasons live on each
 purchase timing snapshot and its receipt summary.
+
+0.4.7 removes the exact-text cache and its per-frame snapshots. UpgradeOcr copies
+only when no task is in flight, supplies a dedicated executor to the native SDK,
+parses completion on that worker and posts results to the main handler. Scheduling
+priority is an optional own-thread hint with a safe fallback. Only main-confined
+state controls admission/close, and the bitmap stays alive until native completion
+and result delivery. Closing a busy recognizer defers cleanup until that completion.
+An idle throttle limits native work to 1 Hz, bypassed during explicit purchasing.
+
+NativeOcrToken preserves raw text and may attach a proven level only after
+LevelMarkerProof checks current native level pixels. This validates the fixed
+separator and digit-component count; it never synthesizes a digit. Known merged
+headings must match the control. Original parser rules remain for unproven text,
+prices and suffixes. Full-strip input is unchanged. OcrStages measures contiguous
+copy/SDK/parse/main-handoff intervals; per-request aggregates exclude missing
+profiles from stage averages. The obsolete cache counters are removed; bounded
+preparation deferral reasons and interruption rules remain.
+
+SinglePurchaseEngine stores one immutable numeric GameReading only when the final
+verification succeeds. Its matching verified request can consume it once. The
+runner accepts it only for the same run's next waiting step, original capture
+age <=750 ms and no unknown screen since that capture. Lease, profile and target
+banknote checks remain. It seeds one precondition, never a gesture; another newer
+complete frame is required. A process-scoped explicit terminal receipt write
+captures the verified report before same-callback rearming can conflate flow
+updates. No image or manufactured timestamp is used in this handoff.

@@ -282,6 +282,100 @@ class AutoPurchaseRunnerTest {
         assertEquals(1500L, timing.totalMillis)
     }
 
+    @Test
+    fun verifiedHandoffSeedsOnlyOneObservationAndNeedsANewerFrameForTheNextTap() {
+        start(2, PurchaseRule.ROTATE)
+        completeOne()
+        val handoff = runner.prepareVerifiedHandoff(
+            lease,
+            UpgradeKind.entries.associateWith {
+                true
+            }
+        )!!
+        assertEquals(UpgradeKind.SPEED, engine.report.value.kind)
+        engine.onReading(handoff) { _, _, _ -> error("Handoff cannot tap") }
+        assertEquals(1, tapped.size)
+        engine.onReading(handoff) { _, _, _ -> error("Duplicate cannot tap") }
+        assertEquals(1, tapped.size)
+        frame()
+        assertEquals(2, tapped.size)
+        assertEquals(1, runner.report.value.verified)
+    }
+
+    @Test
+    fun expiredVerificationFrameFallsBackToTwoNewCompleteReadings() {
+        start(2)
+        completeOne()
+        now += 751
+        assertEquals(
+            null,
+            runner.prepareVerifiedHandoff(
+                lease,
+                UpgradeKind.entries.associateWith { true }
+            )
+        )
+        assertEquals(PurchasePhase.VERIFIED, engine.report.value.phase)
+        frame()
+        assertEquals(1, tapped.size)
+        frame()
+        assertEquals(2, tapped.size)
+    }
+
+    @Test
+    fun aCompletedCapOrAnotherRunCannotReuseThePreviousRunSnapshot() {
+        start(1)
+        completeOne()
+        assertEquals(
+            null,
+            runner.prepareVerifiedHandoff(
+                lease,
+                UpgradeKind.entries.associateWith { true }
+            )
+        )
+        assertEquals(1, tapped.size)
+        start(2)
+        assertEquals(
+            null,
+            runner.prepareVerifiedHandoff(
+                lease,
+                UpgradeKind.entries.associateWith { true }
+            )
+        )
+        assertEquals(PurchasePhase.VERIFIED, engine.report.value.phase)
+        assertEquals(1, tapped.size)
+    }
+
+    @Test
+    fun nextTargetBanknoteProofIsStillRequiredForTheHandedOffFrame() {
+        start(2, PurchaseRule.ROTATE)
+        completeOne()
+        val handoff = runner.prepareVerifiedHandoff(
+            lease,
+            UpgradeKind.entries.associateWith { it != UpgradeKind.SPEED }
+        )!!
+        engine.onReading(handoff) { _, _, _ -> error("Unverified currency cannot tap") }
+        runner.reconcile()
+        assertEquals(AutoRunPhase.STOPPED, runner.report.value.phase)
+        assertEquals(1, tapped.size)
+    }
+
+    @Test
+    fun anUnknownScreenNewerThanTheVerifiedCaptureInvalidatesHandoff() {
+        start(2)
+        completeOne()
+        assertEquals(
+            null,
+            runner.prepareVerifiedHandoff(
+                lease,
+                UpgradeKind.entries.associateWith { true },
+                lastUnknownAt = now
+            )
+        )
+        assertEquals(AutoRunPhase.WAITING, runner.report.value.phase)
+        assertEquals(PurchasePhase.VERIFIED, engine.report.value.phase)
+        assertEquals(1, tapped.size)
+    }
+
     private fun start(limit: Int, rule: PurchaseRule = PurchaseRule.LOWEST_COMPARABLE_COST) {
         assertTrue(runner.start(limit, rule, profile, lease))
     }
