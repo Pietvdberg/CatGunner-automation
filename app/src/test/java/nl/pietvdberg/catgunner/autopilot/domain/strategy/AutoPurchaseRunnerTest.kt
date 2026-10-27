@@ -222,6 +222,66 @@ class AutoPurchaseRunnerTest {
         assertEquals(1, tapped.size)
     }
 
+    @Test
+    fun keepsDistinctPurchaseDurationsIncludingSelectionWaitWithoutDoubleCounting() {
+        start(3)
+        now += 1000
+        completeOne()
+        now += 2000
+        completeOne()
+        now += 3000
+        completeOne()
+        val receipts = runner.report.value.purchases
+        assertEquals(3, receipts.size)
+        assertEquals(listOf(2000L, 3000L, 4000L), receipts.map { it.timing!!.totalMillis })
+        assertEquals(
+            listOf(1250L, 2250L, 3250L),
+            receipts.map {
+                it.timing!!.armedAt - it.timing!!.requestedAt
+            }
+        )
+        repeat(5) { runner.reconcile() }
+        assertEquals(receipts, runner.report.value.purchases)
+        start(1)
+        assertTrue(runner.report.value.purchases.isEmpty())
+    }
+
+    @Test
+    fun interruptedPurchaseTimingIsRetainedAlongsideEarlierVerifiedPurchases() {
+        start(3)
+        completeOne()
+        frame()
+        frame()
+        now += 100
+        runner.stop("User stopped")
+        val receipts = runner.report.value.purchases
+        assertEquals(2, receipts.size)
+        assertEquals(PurchasePhase.VERIFIED, receipts[0].phase)
+        assertEquals(PurchasePhase.UNCONFIRMED, receipts[1].phase)
+        assertEquals(now, receipts[1].timing!!.finishedAt)
+        runner.stop("Again")
+        assertEquals(receipts, runner.report.value.purchases)
+    }
+
+    @Test
+    fun nextPurchaseTimingIncludesAnyDelayBeforeReconciliation() {
+        start(2)
+        frame()
+        frame()
+        val kind = engine.report.value.kind!!
+        engine.gestureCompleted(engine.report.value.id, true)
+        levels[kind] = levels.getValue(kind) + 1
+        frame()
+        now = 2000
+        engine.onReading(reading()) { _, _, _ -> error("No second tap") }
+        now = 2500
+        runner.reconcile()
+        completeOne()
+        val timing = runner.report.value.purchases[1].timing!!
+        assertEquals(2000L, timing.requestedAt)
+        assertEquals(1500L, timing.totalMillis)
+    }
+
     private fun start(limit: Int, rule: PurchaseRule = PurchaseRule.LOWEST_COMPARABLE_COST) {
         assertTrue(runner.start(limit, rule, profile, lease))
     }

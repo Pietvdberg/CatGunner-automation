@@ -117,3 +117,12 @@ Actual gesture refusal/cancellation never becomes a preparatory recheck.
 A separate high-importance outcome channel posts only terminal automatic-run
 notifications, never active-run alerts. Foreground-stop details and dispatch
 checks are retained locally for explicit diagnostic copying.
+
+Per-purchase timing is immutable state on PurchaseReport, measured using the same
+elapsed-realtime clock as the engine. Actual call/callback milestones are distinct
+from queue preparation. Unsent deferral retains the first queue timestamp. Terminal
+outcomes freeze timing. Current-id and arm-time checks exclude old OCR callbacks;
+all OCR counters reset on each arm. AutoRunReport retains up to five correlated
+terminal purchase snapshots for display/copy, including interrupted requests.
+ReceiptRecorder filters duplicate event keys before I/O; notification collectors
+ignore timing-only report changes. The existing journal persists terminal timing.

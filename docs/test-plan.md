@@ -149,3 +149,20 @@ lease changes, unconfirmed stops, profile mismatch, timeout and run correlation.
   AutoPilot or the notification shade earlier still stops the run. Verify alerts
   under the phone's actual notification settings; no sound/banner is guaranteed
   when the user has muted the channel or enabled Do Not Disturb.
+
+## Per-purchase timing comparison (0.4.3)
+
+Run a five-purchase batch using the same rule and calibration, leaving the game
+visible until the outcome notification. Return once complete/stopped, then use
+Copy test diagnostics before starting another run. Check numbered rows #1–#5,
+not the session-wide latest OCR result. Compare total, selection, readiness,
+preparation, callback and verification milliseconds. The first selection includes
+game opening; later selections include any gap after the previous completion.
+Preparation includes unsent deferrals and subsequent fresh evidence acquisition.
+Check each row's before/after-call OCR average/max times, readability/stale counts,
+deferrals and unknown observations. Missing stages on failures must stay unknown,
+not zero. Each request resets counters; completed rows must remain unchanged when
+later OCR runs, after returning to the app, or when a later purchase fails.
+Timings use elapsed realtime and must not change action deadlines or verification.
+A new run resets its numbered history. No slowdown cause should be inferred from
+an overall timer alone; compare individual stages and sample quality first.

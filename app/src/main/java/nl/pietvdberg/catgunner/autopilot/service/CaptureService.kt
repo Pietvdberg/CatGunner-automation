@@ -155,7 +155,9 @@ class CaptureService : Service() {
         scope.launch {
             combine(
                 controller.state.map { it.mode }.distinctUntilChanged(),
-                PurchaseRuntime.engine.report,
+                PurchaseRuntime.engine.report.distinctUntilChangedBy {
+                    Triple(it.id, it.phase, it.detail)
+                },
                 PurchaseRuntime.autoRunner.report
             ) { mode, report, run -> Triple(mode, report, run) }.collect {
                 val state = controller.state.value

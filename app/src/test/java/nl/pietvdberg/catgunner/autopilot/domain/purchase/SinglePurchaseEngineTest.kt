@@ -569,6 +569,103 @@ class SinglePurchaseEngineTest {
         assertEquals(0, dispatches)
     }
 
+    @Test
+    fun timingUsesActualCallAndCallbackAndFreezesAtVerification() {
+        arm()
+        now = 1100
+        engine.recordOcr(engine.report.value.id, now, 80, 90, true)
+        engine.onReading(reading()) { _, _, _ -> true }
+        now = 1300
+        engine.onReading(reading()) { _, _, _ -> true }
+        now = 1400
+        val id = engine.report.value.id
+        engine.executeGesture(id) { true }
+        now = 1450
+        engine.gestureCompleted(id, true)
+        now = 1600
+        engine.recordOcr(id, now, 120, 130, true)
+        feed(level = 11, advance = false)
+        now = 1800
+        feed(level = 11, advance = false)
+        val timing = engine.report.value.timing!!
+        assertEquals(1000L, timing.requestedAt)
+        assertEquals(1300L, timing.firstQueuedAt)
+        assertEquals(1400L, timing.callAt)
+        assertEquals(1450L, timing.callbackAt)
+        assertEquals(1800L, timing.finishedAt)
+        assertEquals(800L, timing.totalMillis)
+        assertEquals(80L, timing.beforeOcr.maximumWorkMillis)
+        assertEquals(120L, timing.afterOcr.maximumWorkMillis)
+        now = 6000
+        engine.recordOcr(id, now, 999, 999, false)
+        engine.tick()
+        assertEquals(timing, engine.report.value.timing)
+    }
+
+    @Test
+    fun deferralRetainsFirstQueueTimeAndOldCallbacksCannotChangeTiming() {
+        arm()
+        now = 1100
+        engine.onReading(reading()) { _, _, _ -> true }
+        now = 1300
+        engine.onReading(reading()) { _, _, _ -> true }
+        val old = engine.report.value
+        now = 1500
+        engine.deferQueued(old.id, old.dispatchAttempt, "Stale frame")
+        now = 1800
+        engine.onReading(reading()) { _, _, _ -> true }
+        now = 2100
+        engine.onReading(reading()) { _, _, _ -> true }
+        engine.gestureCompleted(old.id, true, old.dispatchAttempt)
+        assertEquals(null, engine.report.value.timing!!.callbackAt)
+        val current = engine.report.value
+        now = 2300
+        engine.executeGesture(current.id, current.dispatchAttempt) { true }
+        assertEquals(1300L, engine.report.value.timing!!.firstQueuedAt)
+        assertEquals(2300L, engine.report.value.timing!!.callAt)
+        assertEquals(1, engine.report.value.timing!!.deferrals)
+    }
+
+    @Test
+    fun cancelledAndUnconfirmedTimingHasNoInventedMissingMilestones() {
+        arm()
+        now = 1500
+        engine.cancel("User stopped")
+        val noCall = engine.report.value.timing!!
+        assertEquals(500L, noCall.totalMillis)
+        assertEquals(null, noCall.callAt)
+        assertEquals(null, noCall.callbackAt)
+        assertTrue(noCall.describe().contains("callback=—"))
+        dispatchOnce()
+        now += 100
+        engine.cancel("Lost foreground after call")
+        assertEquals(PurchasePhase.UNCONFIRMED, engine.report.value.phase)
+        assertTrue(engine.report.value.timing!!.callAt != null)
+        assertEquals(null, engine.report.value.timing!!.callbackAt)
+    }
+
+    @Test
+    fun unreadableAndStaleOcrAggregatesResetForEachRequest() {
+        arm()
+        val oldId = engine.report.value.id
+        engine.recordOcr(oldId, now - 1, 999, 999, true)
+        assertEquals(0L, engine.report.value.timing!!.beforeOcr.samples)
+        now += 100
+        engine.recordOcr(oldId, now, 800, 850, false)
+        engine.recordOcr(oldId, now, 200, 250, true)
+        val stats = engine.report.value.timing!!.beforeOcr
+        assertEquals(2L, stats.samples)
+        assertEquals(1L, stats.readable)
+        assertEquals(1L, stats.stale)
+        assertEquals(1000L, stats.totalWorkMillis)
+        engine.cancel("Stop")
+        arm()
+        engine.recordOcr(oldId, now, 999, 999, false)
+        assertEquals(0L, engine.report.value.timing!!.beforeOcr.samples)
+        engine.waitForEvidence("Unrecognized layout")
+        assertEquals(1, engine.report.value.timing!!.unknownObservations)
+    }
+
     private fun arm() {
         assertTrue(engine.arm(UpgradeKind.POWER, profile, lease))
     }

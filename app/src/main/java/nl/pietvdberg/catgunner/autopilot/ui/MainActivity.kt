@@ -152,7 +152,7 @@ class MainActivity : ComponentActivity() {
         content.addView(diagnostics)
         button(R.string.copy_diagnostics) {
             val text = listOf(
-                "AutoPilot 0.4.1",
+                "AutoPilot ${packageManager.getPackageInfo(packageName, 0).versionName}",
                 calibrationStatus.text,
                 purchaseStatus.text,
                 autoStatus.text,
@@ -393,9 +393,23 @@ class MainActivity : ComponentActivity() {
         } else {
             View.GONE
         }
+        report.timing?.let {
+            purchaseStatus.append(getString(R.string.purchase_timing, it.describe()))
+        }
         val run = PurchaseRuntime.autoRunner.report.value
-        autoStatus.text =
-            getString(R.string.auto_status, run.phase.name, run.verified, run.limit, run.detail)
+        autoStatus.text = getString(
+            R.string.auto_status_with_timings,
+            getString(R.string.auto_status, run.phase.name, run.verified, run.limit, run.detail),
+            run.purchases.mapIndexed { index, purchase ->
+                getString(
+                    R.string.auto_purchase_timing,
+                    index + 1,
+                    purchase.kind,
+                    purchase.phase,
+                    purchase.timing?.describe() ?: "—"
+                )
+            }.joinToString("\n\n")
+        )
         val active =
             report.phase in
                 setOf(PurchasePhase.ARMED, PurchasePhase.DISPATCHED, PurchasePhase.VERIFYING)

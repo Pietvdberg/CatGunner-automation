@@ -46,6 +46,21 @@ class PurchaseJournal(context: Context) {
                 .put("gameVersion", report.calibration?.gameVersion)
                 .put("targetX", point?.x).put("targetY", point?.y)
                 .put("recordedAtEpochMillis", System.currentTimeMillis())
+                .put(
+                    "timing",
+                    report.timing?.let { timing ->
+                        JSONObject().put("requestedAtElapsedMillis", timing.requestedAt)
+                            .put("armedAtElapsedMillis", timing.armedAt)
+                            .put("firstQueuedAtElapsedMillis", timing.firstQueuedAt)
+                            .put("callAtElapsedMillis", timing.callAt)
+                            .put("callbackAtElapsedMillis", timing.callbackAt)
+                            .put("finishedAtElapsedMillis", timing.finishedAt)
+                            .put("totalMillis", timing.totalMillis)
+                            .put("deferrals", timing.deferrals)
+                            .put("unknownObservations", timing.unknownObservations)
+                            .put("summary", timing.describe())
+                    }
+                )
         )
         val stream = file.startWrite()
         try {

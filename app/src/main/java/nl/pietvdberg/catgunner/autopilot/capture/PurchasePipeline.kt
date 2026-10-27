@@ -91,6 +91,7 @@ class PurchasePipeline(private val context: Context) : AutoCloseable {
             ) {
                 return@sample
             }
+            engine.recordOcr(requestId, capturedAt, result.workMillis, ageMillis, upgrades != null)
             val callbackForeground = GameAccessibilityService.instance?.foregroundStatus()
                 ?: ForegroundStatus.DISCONNECTED
             if (callbackForeground != ForegroundStatus.VERIFIED) {

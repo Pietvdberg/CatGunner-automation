@@ -5,7 +5,11 @@ import nl.pietvdberg.catgunner.autopilot.domain.purchase.UpgradeReading
 /** Token centers are expressed in the observed 570x1280 reference layout. */
 data class UpgradeOcrToken(val text: String, val x: Float, val y: Float)
 
-data class UpgradeOcrResult(val upgrades: Map<UpgradeKind, UpgradeReading>?, val detail: String)
+data class UpgradeOcrResult(
+    val upgrades: Map<UpgradeKind, UpgradeReading>?,
+    val detail: String,
+    val workMillis: Long = 0
+)
 
 object UpgradeOcrParser {
     fun parse(tokens: List<UpgradeOcrToken>, evidence: UpgradePanelEvidence): UpgradeOcrResult {

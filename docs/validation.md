@@ -186,3 +186,26 @@ validation; a pixel-count reduction is not a measured latency improvement.
 The APK signature, unchanged signing certificate, version code 9, native ARM64
 packaging and 16 KiB ZIP alignment were verified. The ZIP's embedded APK matches
 the standalone bytes. APK SHA-256: `101cdbe97a741438363ab425b9cfa6a78a05671f5f9e0a85f458f923a4dfdcaf`.
+
+## 0.4.3 per-request timing and bounded run history
+
+Ran `tools/cloud-gradle.sh -PsplitApks assembleDebug testDebugUnitTest lintDebug
+ktlintCheck`: all passed. 134 tests executed, zero failures/errors/skips.
+Seven new tests exercise actual call/callback versus queue timestamps; first-queue
+retention across unsent deferrals and ignored old-attempt callbacks; missing-stage
+reporting for cancellation/uncertainty; terminal timestamp freezing; per-request
+OCR counter reset and stale/readability aggregates; individually increasing batch
+durations without double-counting; failed-request history; and inter-purchase
+reconciliation delay accounting. Existing purchase guards still pass unchanged.
+
+Timing-only updates are filtered from capture notification updates and duplicate
+receipt event keys are filtered before journal reads. The journal remains bounded
+to 200 events, run history to at most five requests, and OCR to one in-flight task.
+No per-frame disk logging, deadline extension, extra gesture or automatic resume
+was added. Millisecond milestones use elapsed realtime, not the wall clock.
+Native timing/UI behavior and the cause of the owner's reported progressive
+slowdown still need phone measurements. No cause or speedup is claimed.
+
+APK signature, unchanged development certificate, version code 10 and 16 KiB
+ZIP alignment verified. The ZIP contains identical standalone APK bytes.
+APK SHA-256: `ded606f446ce77409ad7ce4fa0ee5353e773c629b96958523beff88876f36696`.

@@ -54,7 +54,12 @@ class UpgradeOcr : AutoCloseable {
                             )
                         }
                         val duration = SystemClock.elapsedRealtime() - startedAt
-                        completed(result.copy(detail = "OCR work=$duration ms. ${result.detail}"))
+                        completed(
+                            result.copy(
+                                detail = "OCR work=$duration ms. ${result.detail}",
+                                workMillis = duration
+                            )
+                        )
                     }
                 } finally {
                     bitmap.recycle()
@@ -65,7 +70,13 @@ class UpgradeOcr : AutoCloseable {
         } catch (error: RuntimeException) {
             bitmap.recycle()
             busy = false
-            completed(UpgradeOcrResult(null, "OCR startup: ${error.javaClass.simpleName}"))
+            completed(
+                UpgradeOcrResult(
+                    null,
+                    "OCR startup: ${error.javaClass.simpleName}",
+                    SystemClock.elapsedRealtime() - startedAt
+                )
+            )
         }
         return true
     }

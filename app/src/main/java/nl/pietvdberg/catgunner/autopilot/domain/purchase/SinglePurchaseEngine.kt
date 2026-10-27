@@ -44,7 +44,8 @@ data class PurchaseReport(
     val gestureDispatched: Boolean = false,
     val verificationSamples: Int = 0,
     val autoRunId: String? = null,
-    val dispatchAttempt: Long = 0
+    val dispatchAttempt: Long = 0,
+    val timing: PurchaseTiming? = null
 )
 
 /** A one-use request. No retries, automatic rearming, batch taps, or callback-only success. */
@@ -66,7 +67,8 @@ class SinglePurchaseEngine(private val clock: () -> Long) {
         kind: UpgradeKind,
         calibration: CalibrationProfile,
         actionLease: ActionLease,
-        autoRunId: String? = null
+        autoRunId: String? = null,
+        requestedAt: Long? = null
     ): Boolean {
         if (active() ||
             report.value.phase == PurchasePhase.UNCONFIRMED ||
@@ -89,7 +91,8 @@ class SinglePurchaseEngine(private val clock: () -> Long) {
             kind,
             "Armed for one tap. Switch to the game within 30 seconds.",
             calibration = profile,
-            autoRunId = autoRunId
+            autoRunId = autoRunId,
+            timing = PurchaseTiming(requestedAt ?: clock(), clock())
         )
         return true
     }
@@ -108,6 +111,12 @@ class SinglePurchaseEngine(private val clock: () -> Long) {
     @Synchronized
     fun waitForEvidence(reason: String) {
         tick()
+        if (active()) {
+            val timing = report.value.timing!!
+            mutableReport.value = report.value.copy(
+                timing = timing.copy(unknownObservations = timing.unknownObservations + 1)
+            )
+        }
         when {
             report.value.phase == PurchasePhase.ARMED -> {
                 previous = null
@@ -126,6 +135,31 @@ class SinglePurchaseEngine(private val clock: () -> Long) {
             }
             else -> unsafe(reason)
         }
+    }
+
+    /** Attribute only current-request frames; old callbacks cannot contaminate the next purchase. */
+    @Synchronized
+    fun recordOcr(
+        id: String,
+        capturedAt: Long,
+        workMillis: Long,
+        frameAgeMillis: Long,
+        readable: Boolean
+    ) {
+        val timing = report.value.timing ?: return
+        if (!active() || report.value.id != id || capturedAt < timing.armedAt) return
+        val afterCall = timing.callAt?.let { capturedAt >= it } == true
+        val summary = if (afterCall) timing.afterOcr else timing.beforeOcr
+        val updated = summary.add(workMillis, frameAgeMillis, readable, maximumReadingAgeMillis())
+        mutableReport.value = report.value.copy(
+            timing = if (afterCall) {
+                timing.copy(
+                    afterOcr = updated
+                )
+            } else {
+                timing.copy(beforeOcr = updated)
+            }
+        )
     }
 
     @Synchronized
@@ -150,6 +184,7 @@ class SinglePurchaseEngine(private val clock: () -> Long) {
         deadline = clock() + 2000
         mutableReport.value = report.value.copy(
             gestureDispatched = true,
+            timing = report.value.timing?.copy(callAt = clock()),
             detail = "One tap sent; purchase not yet verified."
         )
         return try {
@@ -177,6 +212,7 @@ class SinglePurchaseEngine(private val clock: () -> Long) {
         deadline = armDeadline
         mutableReport.value = report.value.copy(
             phase = PurchasePhase.ARMED,
+            timing = report.value.timing?.let { it.copy(deferrals = it.deferrals + 1) },
             detail = "No tap sent; waiting for two new fresh readings: $reason"
         )
         return true
@@ -266,6 +302,9 @@ class SinglePurchaseEngine(private val clock: () -> Long) {
                 mutableReport.value = current.copy(
                     phase = PurchasePhase.DISPATCHED,
                     before = target,
+                    timing = current.timing?.let {
+                        it.copy(firstQueuedAt = it.firstQueuedAt ?: clock())
+                    },
                     dispatchAttempt = current.dispatchAttempt + 1,
                     detail = "One gesture request pending; purchase is not verified."
                 )
@@ -292,6 +331,9 @@ class SinglePurchaseEngine(private val clock: () -> Long) {
         ) {
             return
         }
+        mutableReport.value = report.value.copy(
+            timing = report.value.timing?.copy(callbackAt = clock())
+        )
         if (!succeeded) {
             unsafe("Gesture cancelled or rejected. No retry.")
             return
@@ -354,6 +396,7 @@ class SinglePurchaseEngine(private val clock: () -> Long) {
             phase in setOf(PurchasePhase.FAILED, PurchasePhase.CANCELLED)
         mutableReport.value = report.value.copy(
             phase = if (unconfirmed) PurchasePhase.UNCONFIRMED else phase,
+            timing = report.value.timing?.copy(finishedAt = clock()),
             detail = if (unconfirmed) {
                 "Tap sent; purchase outcome UNCONFIRMED. Inspect the game; no retry. $detail"
             } else {

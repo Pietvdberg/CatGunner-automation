@@ -1,18 +1,18 @@
 # CatGunner AutoPilot
 
 Private, on-device Android assistant for Idle Cat Gunner (`com.Chodun.CatGunner`).
-Version 0.4.2 streamlines OCR for **bounded automatic purchasing**. The owner has
+Version 0.4.3 adds per-purchase timing and streamlines OCR for **bounded automatic purchasing**. The owner has
 validated a complete five-purchase run on 0.4.1. Each run has a 1/3/5-purchase cap, with one verified action
 at a time. Expected-gain optimization and Rebirth Rush remain future milestones. Green banknotes
 are the only permitted currency; gems, unknown currencies and real money are forbidden.
 
 ## Download on your phone or computer
 
-- **[Download Pixel 10 APK (17.2 MB)](https://github.com/Pietvdberg/CatGunner-automation/raw/refs/tags/v0.4.2/downloads/AutoPilot-Pixel10-0.4.2.apk)**
-- **[Download ZIP with APK and USB-install instructions (9.5 MB)](https://github.com/Pietvdberg/CatGunner-automation/raw/refs/tags/v0.4.2/downloads/AutoPilot-Pixel10-download.zip)**
+- **[Download Pixel 10 APK (17.2 MB)](https://github.com/Pietvdberg/CatGunner-automation/raw/refs/tags/v0.4.3/downloads/AutoPilot-Pixel10-0.4.3.apk)**
+- **[Download ZIP with APK and USB-install instructions (9.5 MB)](https://github.com/Pietvdberg/CatGunner-automation/raw/refs/tags/v0.4.3/downloads/AutoPilot-Pixel10-download.zip)**
 - [View installation instructions](downloads/INSTALL.txt) and [SHA-256 checksums](downloads/SHA256SUMS).
 
-These are signed 0.4.2 builds. Hosting on GitHub fixes
+These are signed 0.4.3 builds. Hosting on GitHub fixes
 file access; it does not remove Play Protect's installation block. A work computer
 can download the files without installing software. USB/ADB installation requires
 a computer on which you are allowed to run Android Platform-Tools.
@@ -201,3 +201,30 @@ tap remain required. Diagnostics show recognition duration and readable sample
 counts, and completion reports include total run seconds including game opening.
 Native recognition accuracy, latency and battery impact of this update need phone
 validation. Green banknotes only; no actual gesture retries.
+
+## 0.4.3 per-purchase timing
+
+Every armed purchase has its own monotonic timestamps and OCR aggregates. After
+an automatic run, numbered records #1–#5 stay visible below its status, including
+stopped/unconfirmed requests. **Copy test diagnostics** includes those records
+and the installed build version. A new run starts a new list. Timing milestones
+also persist in the existing bounded local receipt journal (no screenshots).
+
+Each row reports total time, selection wait, readiness, preparation, Android
+callback wait and verification, plus deferral/unknown-observation counts. Selection
+runs from the previous completion (or run start) until arming; the first row
+therefore includes opening the game. Readiness ends at the first prepared request.
+Preparation includes receipt I/O and any subsequent unsent evidence reacquisition
+until the actual framework call. Verification ends at the final outcome; missing
+milestones display a dash rather than an invented zero. These diagnostic milestones
+do not extend action deadlines or change purchase decisions.
+
+OCR before/after the call is aggregated separately for each armed request: sample
+count, readable count, stale count, average/maximum work milliseconds, maximum
+capture-to-completion frame age. Pre-arm selection frames are excluded from these
+OCR counts; their wait is included in the selection duration. Unknown-observation
+counts include failed OCR, stale frames and visual mismatch events, not just OCR.
+Use the per-row timings to compare later purchases with earlier ones. There is no
+established cause of progressive slowdown yet. Repeated same-event receipts are
+now filtered before journal reads; timing-only updates do not trigger capture
+notification refreshes. No per-frame disk logging or unbounded history was added.

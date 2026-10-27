@@ -4,6 +4,7 @@ import android.content.Context
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.distinctUntilChangedBy
 import kotlinx.coroutines.launch
 import nl.pietvdberg.catgunner.autopilot.domain.purchase.PurchasePhase
 
@@ -18,7 +19,9 @@ object ReceiptRecorder {
         installed = true
         val journal = PurchaseJournal(context.applicationContext)
         scope.launch {
-            PurchaseRuntime.engine.report.collect { report ->
+            PurchaseRuntime.engine.report.distinctUntilChangedBy {
+                Triple(it.id, it.phase, it.gestureDispatched to it.dispatchAttempt)
+            }.collect { report ->
                 if (report.phase !in setOf(PurchasePhase.IDLE, PurchasePhase.ARMED)) {
                     try {
                         journal.append(report)

@@ -51,3 +51,9 @@ crops, skips preview copying during purchases and samples active frames faster.
 Its cloud-tested geometry does not establish native MLKit accuracy or speed.
 Run duration and OCR work time are now displayed for phone comparison. The
 higher active sampling rate needs battery/thermal validation; idle remains 4 Hz.
+
+0.4.3 adds per-purchase monotonic milestones and before/after-call OCR aggregates,
+including terminal failures. These expose trends but do not identify a cause of
+progressive latency without phone measurements. Active-run rows are retained only
+until a new run/process death; the bounded receipt journal saves terminal timing
+milestones. A run stopped before any request is armed has no purchase row.

@@ -6,6 +6,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import nl.pietvdberg.catgunner.autopilot.domain.purchase.CalibrationProfile
 import nl.pietvdberg.catgunner.autopilot.domain.purchase.GameReading
 import nl.pietvdberg.catgunner.autopilot.domain.purchase.PurchasePhase
+import nl.pietvdberg.catgunner.autopilot.domain.purchase.PurchaseReport
 import nl.pietvdberg.catgunner.autopilot.domain.purchase.SinglePurchaseEngine
 import nl.pietvdberg.catgunner.autopilot.domain.state.ActionLease
 import nl.pietvdberg.catgunner.autopilot.vision.UpgradeKind
@@ -19,7 +20,8 @@ data class AutoRunReport(
     val verified: Int = 0,
     val rule: PurchaseRule = PurchaseRule.LOWEST_COMPARABLE_COST,
     val detail: String = "Automatic purchasing is off.",
-    val selected: UpgradeKind? = null
+    val selected: UpgradeKind? = null,
+    val purchases: List<PurchaseReport> = emptyList()
 ) {
     val active: Boolean get() = phase == AutoRunPhase.WAITING || phase == AutoRunPhase.RUNNING
 }
@@ -36,6 +38,7 @@ class AutoPurchaseRunner(private val engine: SinglePurchaseEngine, private val c
     private var notBefore = 0L
     private var sawGame = false
     private var startedAt = 0L
+    private var stepRequestedAt = 0L
 
     @Synchronized
     fun start(
@@ -63,6 +66,7 @@ class AutoPurchaseRunner(private val engine: SinglePurchaseEngine, private val c
         nextIndex = 0
         sawGame = false
         startedAt = clock()
+        stepRequestedAt = startedAt
         notBefore = startedAt
         deadline = startedAt + 30_000
         mutableReport.value = AutoRunReport(
@@ -96,7 +100,7 @@ class AutoPurchaseRunner(private val engine: SinglePurchaseEngine, private val c
             stop(choice.reason)
             return
         }
-        if (!engine.arm(selected, calibration, lease!!, report.value.id)) {
+        if (!engine.arm(selected, calibration, lease!!, report.value.id, stepRequestedAt)) {
             stop("Single-purchase engine refused the next request. No retry.")
             return
         }
@@ -133,11 +137,13 @@ class AutoPurchaseRunner(private val engine: SinglePurchaseEngine, private val c
                 ownedRequest = null
                 val count = report.value.verified + 1
                 nextIndex = (purchase.kind!!.ordinal + 1) % UpgradeKind.entries.size
+                stepRequestedAt = purchase.timing?.finishedAt ?: clock()
                 notBefore = clock()
                 deadline = clock() + 30_000
                 val complete = count >= report.value.limit
                 mutableReport.value = report.value.copy(
                     verified = count,
+                    purchases = report.value.purchases + purchase,
                     phase = if (complete) AutoRunPhase.COMPLETE else AutoRunPhase.WAITING,
                     detail = if (complete) {
                         "Run complete: $count/${report.value.limit} purchases verified in " +
@@ -171,7 +177,20 @@ class AutoPurchaseRunner(private val engine: SinglePurchaseEngine, private val c
         }
         val owned = ownedRequest
         ownedRequest = null
-        mutableReport.value = report.value.copy(phase = AutoRunPhase.STOPPED, detail = reason)
         if (owned != null && engine.report.value.id == owned) engine.cancel(reason)
+        val purchase = engine.report.value
+        val purchases = if (owned != null &&
+            purchase.id == owned &&
+            report.value.purchases.none { it.id == owned }
+        ) {
+            report.value.purchases + purchase
+        } else {
+            report.value.purchases
+        }
+        mutableReport.value = report.value.copy(
+            phase = AutoRunPhase.STOPPED,
+            detail = reason,
+            purchases = purchases
+        )
     }
 }
