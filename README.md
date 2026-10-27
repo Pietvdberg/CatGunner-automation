@@ -1,19 +1,19 @@
 # CatGunner AutoPilot
 
 Private, on-device Android assistant for Idle Cat Gunner (`com.Chodun.CatGunner`).
-Version 0.4.4 restores the phone-validated OCR strip layout and retains per-purchase
-timing for **bounded automatic purchasing**. The owner has
+Version 0.4.5 adds exact live-pixel rechecks to reduce repeated OCR in
+**bounded automatic purchasing**, with per-purchase timing retained. The owner has
 validated a complete five-purchase run on 0.4.1. Each run has a 1/3/5-purchase cap, with one verified action
 at a time. Expected-gain optimization and Rebirth Rush remain future milestones. Green banknotes
 are the only permitted currency; gems, unknown currencies and real money are forbidden.
 
 ## Download on your phone or computer
 
-- **[Download Pixel 10 APK (17.2 MB)](https://github.com/Pietvdberg/CatGunner-automation/raw/refs/tags/v0.4.4/downloads/AutoPilot-Pixel10-0.4.4.apk)**
-- **[Download ZIP with APK and USB-install instructions (9.5 MB)](https://github.com/Pietvdberg/CatGunner-automation/raw/refs/tags/v0.4.4/downloads/AutoPilot-Pixel10-download.zip)**
+- **[Download Pixel 10 APK (17.2 MB)](https://github.com/Pietvdberg/CatGunner-automation/raw/refs/tags/v0.4.5/downloads/AutoPilot-Pixel10-0.4.5.apk)**
+- **[Download ZIP with APK and USB-install instructions (9.5 MB)](https://github.com/Pietvdberg/CatGunner-automation/raw/refs/tags/v0.4.5/downloads/AutoPilot-Pixel10-download.zip)**
 - [View installation instructions](downloads/INSTALL.txt) and [SHA-256 checksums](downloads/SHA256SUMS).
 
-These are signed 0.4.4 builds. Hosting on GitHub fixes
+These are signed 0.4.5 builds. Hosting on GitHub fixes
 file access; it does not remove Play Protect's installation block. A work computer
 can download the files without installing software. USB/ADB installation requires
 a computer on which you are allowed to run Android Platform-Tools.
@@ -243,3 +243,28 @@ needs a phone regression check; cloud tests cannot validate native MLKit accurac
 Install over the current app; calibration remains saved. A run that cannot arm
 any purchase has no numbered purchase records; its latest OCR diagnostics still
 show the readability failure.
+
+## 0.4.5 avoids repeated OCR of identical text
+
+Full-strip OCR retains the working image layout. After a complete native reading,
+fresh game frames can reuse its interpretation only if every RGB pixel in all six
+watched level/price regions is identical. The original OCR token boxes must all fit
+inside those regions. This compares native pixels directly, without fuzzy matches,
+resizing or hashes. Current visual availability, banknote icons, foreground and
+session checks still run. Each confirmation uses a distinct captured frame.
+
+Changed text, missing token coverage, expired interpretation (2 seconds from the
+original source capture), game/session changes or unknown UI force full OCR.
+Every actual gesture invalidates reuse, including any pending old OCR admission.
+The next purchase still waits for the prior level increase to be verified on two
+frames. The cache never predicts an upgrade, changes a price or invents digits.
+The existing 750 ms pre-action and 500 ms final visual limits remain in place;
+rechecks carry the timestamp of the frame whose pixels were actually compared.
+
+RGBA strips are copied in bulk with identical RGB values and support for native
+row padding/crop offsets. Unsupported strides retain the checked per-pixel path.
+Per-purchase diagnostics now report pixel recheck counts separately from native
+OCR average/max time, so short rechecks do not dilute inference timing. Pixel
+recheck hit rate and end-to-end speed need phone validation; no speedup is claimed
+from cloud unit tests. The first full OCR and each changed level/price still incur
+native inference latency. No Rebirth Rush or continuous unbounded mode is enabled.

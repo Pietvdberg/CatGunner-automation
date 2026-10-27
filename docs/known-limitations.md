@@ -63,3 +63,12 @@ purchase. 0.4.4 removes the six-field atlas and restores the original 0.4.1 stri
 input and mapping. Geometric unit tests did not establish native MLKit accuracy;
 the crop experiment failed that phone validation. Per-purchase diagnostics remain.
 The restored combination still needs phone validation before any speed claim.
+
+0.4.5 reduces repeated inference using exact current-pixel equality with a recent
+complete OCR source. It may miss frequently when animation touches watched text
+regions; that costs performance and forces unchanged full-strip OCR. Cloud tests
+cannot establish live hit rate or phone latency. The complete OCR interpretation
+is not independently inferred again for a pixel-identical confirmation frame;
+verification uses a fresh frame with identical watched text and renewed visual,
+currency, foreground, session and freshness checks. Two distinct post-call frames
+must still show exactly one level increase. New text always needs native OCR.

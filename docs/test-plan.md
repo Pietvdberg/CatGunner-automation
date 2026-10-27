@@ -166,3 +166,16 @@ later OCR runs, after returning to the app, or when a later purchase fails.
 Timings use elapsed realtime and must not change action deadlines or verification.
 A new run resets its numbered history. No slowdown cause should be inferred from
 an overall timer alone; compare individual stages and sample quality first.
+
+## Exact live-pixel rechecks (0.4.5)
+
+Repeat the same three-purchase rule. Confirm each requested purchase completes
+with VERIFIED 2/2 before the next tap. Compare numbered total/preparation/
+verification milliseconds and the new pixel recheck counts. Native OCR avg/max
+must exclude recheck work. Unchanged live text should yield some rechecks; changed
+levels/costs must force native OCR. If animation prevents equality, recheck counts
+may stay zero and inference must still work normally. No reported phone speedup
+is established until these measurements are supplied. Pause, app switching,
+unknown dialogs and actual gestures must invalidate reuse. Existing tests cover
+cache expiry/context, changed pixels, late native completion and distinct frames;
+manual phone checks are still needed for the full native/rendering integration.

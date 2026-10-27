@@ -233,3 +233,39 @@ for this new APK is claimed.
 
 Signature, unchanged certificate, version code 11 and 16 KiB ZIP alignment
 verified. ZIP and standalone APK bytes match. APK SHA-256: `4cdc488c14687ed857dbe4d2f53da3ba3334f9c541ad147355861f264c93b2a9`.
+
+## 0.4.5 exact live-text rechecks and bulk RGBA copies
+
+Ran `tools/cloud-gradle.sh -PsplitApks assembleDebug testDebugUnitTest lintDebug
+ktlintCheck`: all passed. 145 tests executed, zero failures/errors/skips.
+Fifteen added tests cover native pixel identity across RGBA strides, row padding,
+buffer offsets, crop coordinates and missing final alpha; copy bounds; every
+watched level/price region changing by one RGB value; source expiry without
+extension; dimensions, capture lease and game-version changes; actual gesture/
+unknown-layout invalidation; late completion; complete native readings and token
+box coverage; current availability refresh and unknown appearance rejection;
+per-purchase native OCR averages excluding pixel rechecks; distinct captured frame
+requirements before and after a call; and a complete real-engine transaction with
+native interpretations for changed text plus exact pixel rechecks for the second
+frames. The latter is a synthetic integration test, not a native MLKit benchmark.
+
+All changed-text OCR still uses the full native strip and original token mapping.
+Bulk copy tests verify identical RGB values to the previous checked per-pixel
+path. ExactTextCache uses content equality, not fuzzy matching or hashes; it
+requires all six regions and covered native OCR token bounds. It never extends
+the original two-second source lifetime or derives new numbers. Each recheck
+uses its own captured timestamp and renews availability, foreground and banknote
+checks. Native interpretation is reused only when actual current watched pixels
+are identical. Actual calls and unknown layouts invalidate pending admissions.
+Freshness thresholds, deadlines, two distinct pre/post observations, no gesture
+retry, explicit interruption and the cap remain unchanged. Retained patches are
+bounded and in memory only. No per-frame disk writes or parallel native OCR were
+added.
+
+The owner validated 0.4.4 at 3/3 in 15.84 seconds. Native hit rate, OCR accuracy,
+end-to-end latency and battery impact of 0.4.5 still require phone validation.
+There is no measured phone speedup yet; unchanged pixels can avoid redundant
+inference, but animation may force frequent fallback to native OCR.
+
+Signature, unchanged certificate, version code 12 and 16 KiB ZIP alignment were
+verified. ZIP and standalone APK bytes match. APK SHA-256: `3aa6ad4f300389df8f8de8ae6e4ecd9d10d04977bc92df8dc3700405c13794f4`.

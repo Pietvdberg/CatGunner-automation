@@ -128,3 +128,18 @@ all OCR counters reset on each arm. AutoRunReport retains up to five correlated
 terminal purchase snapshots for display/copy, including interrupted requests.
 ReceiptRecorder filters duplicate event keys before I/O; notification collectors
 ignore timing-only report changes. The existing journal persists terminal timing.
+
+ExactTextCache retains one source-bound interpretation and native level/price
+patches in memory. Coverage validation requires every level/cost token box to fit
+its watched patch; completeness still comes from UpgradeOcrParser. Each current
+frame must match all six patches by IntArray content equality, dimensions,
+game version and observation lease. Fresh current-frame appearance/financial
+checks are independent. Rechecks do not update the original 2-second expiry.
+Unknown layout/foreground and actual calls invalidate the cache epoch, preventing
+late pending OCR from reseeding it. OCR completion can seed only if the latest
+observed text pixels still equal its source pixels. Both cache and native results
+flow through the same engine, which still requires distinct captured timestamps.
+RGBA bulk copies preserve the exact full-strip input and fall back on checked
+copies for unsupported strides or a missing final alpha byte. No raw frame buffer
+is retained beyond its Image lifetime. A bounded set of copied text patches lives
+in memory only. No per-frame disk writes or additional native OCR tasks are added.

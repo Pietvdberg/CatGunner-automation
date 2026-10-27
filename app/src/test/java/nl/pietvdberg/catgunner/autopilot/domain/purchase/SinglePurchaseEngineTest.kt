@@ -666,6 +666,30 @@ class SinglePurchaseEngineTest {
         assertEquals(1, engine.report.value.timing!!.unknownObservations)
     }
 
+    @Test
+    fun pixelRechecksStillRequireDistinctFramesBeforeAndAfterOneActualCall() {
+        arm()
+        val id = engine.report.value.id
+        engine.recordOcr(id, now, 600, 610, true)
+        feed(advance = false)
+        engine.recordOcr(id, now, 3, 3, true, pixelRecheck = true)
+        feed(advance = false)
+        assertEquals(0, dispatches)
+        feed()
+        assertEquals(1, dispatches)
+        engine.gestureCompleted(id, true)
+        feed(level = 11)
+        engine.recordOcr(id, now, 3, 3, true, pixelRecheck = true)
+        feed(level = 11, advance = false)
+        assertEquals(PurchasePhase.VERIFYING, engine.report.value.phase)
+        feed(level = 11)
+        assertEquals(PurchasePhase.VERIFIED, engine.report.value.phase)
+        val stats = engine.report.value.timing!!.beforeOcr
+        assertEquals(1L, stats.pixelRechecks)
+        assertEquals(600L, stats.totalWorkMillis)
+        assertTrue(stats.describe().contains("native OCR avg/max=600/600"))
+    }
+
     private fun arm() {
         assertTrue(engine.arm(UpgradeKind.POWER, profile, lease))
     }

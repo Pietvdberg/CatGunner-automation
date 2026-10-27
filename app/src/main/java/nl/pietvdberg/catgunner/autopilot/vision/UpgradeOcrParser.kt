@@ -8,22 +8,47 @@ data class UpgradeOcrToken(val text: String, val x: Float, val y: Float)
 data class UpgradeOcrResult(
     val upgrades: Map<UpgradeKind, UpgradeReading>?,
     val detail: String,
-    val workMillis: Long = 0
-)
+    val workMillis: Long = 0,
+    val pixelRecheck: Boolean = false
+) {
+    fun withCurrentAppearance(evidence: UpgradePanelEvidence): UpgradeOcrResult {
+        if (!evidence.recognized) {
+            return copy(
+                upgrades = null,
+                detail = "Unknown current appearance"
+            )
+        }
+        return copy(
+            upgrades = upgrades?.mapValues { (kind, reading) ->
+                reading.copy(
+                    available = evidence.upgrades.first { it.kind == kind }.availability ==
+                        AvailabilityAppearance.AVAILABLE
+                )
+            }
+        )
+    }
+}
 
 object UpgradeOcrParser {
+    fun belongsTo(token: UpgradeOcrToken, kind: UpgradeKind, field: OcrField): Boolean {
+        val offset = kind.ordinal * 169
+        val left = if (field == OcrField.LEVEL) 118 else 95
+        val right = if (field == OcrField.LEVEL) 192 else 174
+        val top = if (field == OcrField.LEVEL) 1150 else 1220
+        val bottom = if (field == OcrField.LEVEL) 1178 else 1248
+        return token.x in (left + offset).toFloat()..(right + offset).toFloat() &&
+            token.y in top.toFloat()..bottom.toFloat()
+    }
+
     fun parse(tokens: List<UpgradeOcrToken>, evidence: UpgradePanelEvidence): UpgradeOcrResult {
         val readings = mutableMapOf<UpgradeKind, UpgradeReading>()
         val details = mutableListOf<String>()
         val missing = mutableListOf<String>()
         for (kind in UpgradeKind.entries) {
-            val offset = kind.ordinal * 169
-            fun region(left: Int, right: Int, low: Int, high: Int): String = tokens.filter {
-                it.x in (left + offset).toFloat()..(right + offset).toFloat() &&
-                    it.y in low.toFloat()..high.toFloat()
-            }.sortedBy { it.x }.joinToString("") { it.text }
-            val rawLevel = region(118, 192, 1150, 1178)
-            val rawCost = region(95, 174, 1220, 1248)
+            fun region(field: OcrField): String = tokens.filter { belongsTo(it, kind, field) }
+                .sortedBy { it.x }.joinToString("") { it.text }
+            val rawLevel = region(OcrField.LEVEL)
+            val rawCost = region(OcrField.COST)
             val level = UpgradeTextParser.level(rawLevel)
             val cost = UpgradeTextParser.cost(rawCost)
             details += "${kind.name}: level='${rawLevel.take(32)}' parsed=$level, " +

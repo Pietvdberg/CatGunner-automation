@@ -24,6 +24,7 @@ import nl.pietvdberg.catgunner.autopilot.domain.purchase.GameReading
 import nl.pietvdberg.catgunner.autopilot.domain.purchase.PurchasePhase
 import nl.pietvdberg.catgunner.autopilot.domain.state.AutoPilotSession
 import nl.pietvdberg.catgunner.autopilot.vision.BanknoteMatcher
+import nl.pietvdberg.catgunner.autopilot.vision.OcrContext
 import nl.pietvdberg.catgunner.autopilot.vision.PixelSource
 import nl.pietvdberg.catgunner.autopilot.vision.UpgradeKind
 import nl.pietvdberg.catgunner.autopilot.vision.UpgradeOcr
@@ -65,6 +66,7 @@ class PurchasePipeline(private val context: Context) : AutoCloseable {
         }
         LiveDiagnostics.game(evidence)
         if (!evidence.recognized) {
+            ocr.invalidate()
             engine.waitForEvidence("Upgrade controls: ${LiveDiagnostics.describe(evidence)}")
             return
         }
@@ -77,7 +79,7 @@ class PurchasePipeline(private val context: Context) : AutoCloseable {
         val banknoteMatches = UpgradeKind.entries
             .associateWith { banknote.matches(pixels, it) }
         latestBanknoteMatches = banknoteMatches
-        ocr.sample(pixels, evidence) { result ->
+        ocr.sample(pixels, evidence, OcrContext(actionLease, version), capturedAt) { result ->
             val ageMillis = SystemClock.elapsedRealtime() - capturedAt
             ocrSamples++
             if (result.upgrades != null) readableSamples++
@@ -91,7 +93,14 @@ class PurchasePipeline(private val context: Context) : AutoCloseable {
             ) {
                 return@sample
             }
-            engine.recordOcr(requestId, capturedAt, result.workMillis, ageMillis, upgrades != null)
+            engine.recordOcr(
+                requestId,
+                capturedAt,
+                result.workMillis,
+                ageMillis,
+                upgrades != null,
+                result.pixelRecheck
+            )
             val callbackForeground = GameAccessibilityService.instance?.foregroundStatus()
                 ?: ForegroundStatus.DISCONNECTED
             if (callbackForeground != ForegroundStatus.VERIFIED) {
@@ -173,6 +182,7 @@ class PurchasePipeline(private val context: Context) : AutoCloseable {
                                 id,
                                 request.dispatchAttempt
                             ) {
+                                ocr.invalidate()
                                 val accepted = GameAccessibilityService.instance?.tapOnce(
                                     point.x * nativeWidth,
                                     point.y * nativeHeight
@@ -209,6 +219,7 @@ class PurchasePipeline(private val context: Context) : AutoCloseable {
     }
 
     private fun foregroundLost(reason: String) {
+        ocr.invalidate()
         PurchaseRuntime.autoRunner.foregroundLost(reason)
         if (engine.report.value.phase == PurchasePhase.ARMED) {
             engine.waitForEvidence(reason)

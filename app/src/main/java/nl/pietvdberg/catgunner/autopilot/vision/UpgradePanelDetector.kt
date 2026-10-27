@@ -8,6 +8,14 @@ interface PixelSource {
     val width: Int
     val height: Int
     fun rgbAt(x: Int, y: Int): Int
+
+    fun copyArgb(left: Int, top: Int, width: Int, height: Int): IntArray {
+        require(left >= 0 && top >= 0 && width > 0 && height > 0)
+        require(left.toLong() + width <= this.width && top.toLong() + height <= this.height)
+        return IntArray(width * height) { index ->
+            (0xFF shl 24) or rgbAt(left + index % width, top + index / width)
+        }
+    }
 }
 
 enum class UpgradeKind { POWER, SPEED, MONEY }

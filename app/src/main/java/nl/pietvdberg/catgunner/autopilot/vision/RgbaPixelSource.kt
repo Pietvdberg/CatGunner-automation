@@ -1,6 +1,7 @@
 package nl.pietvdberg.catgunner.autopilot.vision
 
 import java.nio.ByteBuffer
+import java.nio.ByteOrder
 
 /** Borrowed RGBA_8888 pixels, valid only while the owning Image is open. */
 class RgbaPixelSource(
@@ -22,6 +23,24 @@ class RgbaPixelSource(
         val lastByte = start.toLong() + (cropTop.toLong() + height - 1) * rowStride +
             (cropLeft.toLong() + width - 1) * pixelStride + 2
         require(lastByte < bytes.limit())
+    }
+
+    override fun copyArgb(left: Int, top: Int, width: Int, height: Int): IntArray {
+        require(left >= 0 && top >= 0 && width > 0 && height > 0)
+        require(left.toLong() + width <= this.width && top.toLong() + height <= this.height)
+        val lastAlpha = start.toLong() + (cropTop.toLong() + top + height - 1) * rowStride +
+            (cropLeft.toLong() + left + width - 1) * pixelStride + 3
+        if (pixelStride != 4 || rowStride % 4 != 0 || lastAlpha >= bytes.limit()) {
+            return super.copyArgb(left, top, width, height)
+        }
+        val ints = bytes.duplicate().order(ByteOrder.BIG_ENDIAN).asIntBuffer()
+        val result = IntArray(width * height)
+        for (y in 0 until height) {
+            ints.position((cropTop + top + y) * (rowStride / 4) + cropLeft + left)
+            ints.get(result, y * width, width)
+        }
+        for (index in result.indices) result[index] = (0xFF shl 24) or (result[index] ushr 8)
+        return result
     }
 
     override fun rgbAt(x: Int, y: Int): Int {

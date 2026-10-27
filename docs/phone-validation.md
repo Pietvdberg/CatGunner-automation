@@ -71,3 +71,18 @@ not establish recognition accuracy of the repacked fields.
 used by the completed 0.4.1 run. All per-purchase timing and purchase guards remain.
 The restored combination needs a phone regression check; no new accuracy/speed
 result is claimed. Source SHA-256: `f956dba194ff229de26ec0eb9d650bf5e1ae72731dad5c1fb9e76f4cb3c89f68`.
+
+## 0.4.4 three-purchase timing evidence (135729.jpg)
+
+All three lowest-comparable-price purchases were VERIFIED in 15.84 seconds.
+Individual totals: Power 5339 ms, Money 7108 ms, Power 3392 ms. The middle
+purchase had one deferral, one stale pre-call OCR observation and 3467 ms in
+preparation; the exact final guard responsible is not retained in this screenshot.
+Native OCR averages were roughly 530–651 ms and verification 1932–2413 ms.
+This does not establish progressive slowdown (the third purchase is fastest), but
+the owner confirms the absolute speed is unacceptable. First selection includes
+2148 ms of game opening/readiness. Source SHA-256: `7046a57b6c452836bf2756bdd7f2cc48b2b6a083adb4dacc5e6bfb85d8b8d38d`.
+
+0.4.5 targets redundant inference with exact live text-pixel rechecks, retaining
+full-strip OCR for changed pixels. Its live match rate, accuracy and per-purchase
+latency need phone validation. No phone speedup is claimed from cloud tests.

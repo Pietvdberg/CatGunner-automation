@@ -144,13 +144,20 @@ class SinglePurchaseEngine(private val clock: () -> Long) {
         capturedAt: Long,
         workMillis: Long,
         frameAgeMillis: Long,
-        readable: Boolean
+        readable: Boolean,
+        pixelRecheck: Boolean = false
     ) {
         val timing = report.value.timing ?: return
         if (!active() || report.value.id != id || capturedAt < timing.armedAt) return
         val afterCall = timing.callAt?.let { capturedAt >= it } == true
         val summary = if (afterCall) timing.afterOcr else timing.beforeOcr
-        val updated = summary.add(workMillis, frameAgeMillis, readable, maximumReadingAgeMillis())
+        val updated = summary.add(
+            workMillis,
+            frameAgeMillis,
+            readable,
+            maximumReadingAgeMillis(),
+            pixelRecheck
+        )
         mutableReport.value = report.value.copy(
             timing = if (afterCall) {
                 timing.copy(
