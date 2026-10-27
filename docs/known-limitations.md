@@ -57,3 +57,9 @@ including terminal failures. These expose trends but do not identify a cause of
 progressive latency without phone measurements. Active-run rows are retained only
 until a new run/process death; the bounded receipt journal saves terminal timing
 milestones. A run stopped before any request is armed has no purchase row.
+
+0.4.3 owner evidence (135728.jpg) shows 0/28 readable OCR results and no armed
+purchase. 0.4.4 removes the six-field atlas and restores the original 0.4.1 strip
+input and mapping. Geometric unit tests did not establish native MLKit accuracy;
+the crop experiment failed that phone validation. Per-purchase diagnostics remain.
+The restored combination still needs phone validation before any speed claim.

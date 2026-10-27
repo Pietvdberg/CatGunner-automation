@@ -1,4 +1,4 @@
-CatGunner AutoPilot 0.4.3 — Pixel 10 / Android 16
+CatGunner AutoPilot 0.4.4 — Pixel 10 / Android 16
 
 The APK is signed with the same development certificate as previous versions.
 It includes offline OCR. It does not disable or bypass Play Protect.
@@ -6,7 +6,7 @@ It includes offline OCR. It does not disable or bypass Play Protect.
 Ubuntu update (using the Platform-Tools folder from the previous installation):
   cd ~/Downloads
   ./platform-tools/adb devices
-  ./platform-tools/adb install -r ~/Downloads/AutoPilot-Pixel10-0.4.3.apk
+  ./platform-tools/adb install -r ~/Downloads/AutoPilot-Pixel10-0.4.4.apk
 
 Connect the unlocked phone over USB with USB debugging enabled; accept the
 phone's debugging prompt. Keep Play Protect enabled. If ADB reports an error,
@@ -61,3 +61,10 @@ show a dash. The first selection includes game opening. Preparation includes any
 unsent evidence rechecks. Pre-arm frames are excluded from OCR counts. Failed and
 unconfirmed armed requests keep timing too. Start a new run to reset the list.
 Do not return to inspect timings while the run is active; wait for its outcome.
+
+0.4.4 fixes the no-action OCR regression: the six packed fields from 0.4.2/0.4.3
+are removed. Recognition uses the original full upgrade strip and coordinate
+mapping from the phone-validated 0.4.1 build. Per-purchase timing stays enabled.
+Calibration stays saved. Start/resume capture and explicitly start a new run;
+keep the game visible until its outcome notification. Native recognition must
+be rechecked on the phone. No purchase guard or strict level parser was relaxed.

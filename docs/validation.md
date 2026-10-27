@@ -209,3 +209,27 @@ slowdown still need phone measurements. No cause or speedup is claimed.
 APK signature, unchanged development certificate, version code 10 and 16 KiB
 ZIP alignment verified. The ZIP contains identical standalone APK bytes.
 APK SHA-256: `ded606f446ce77409ad7ce4fa0ee5353e773c629b96958523beff88876f36696`.
+
+## 0.4.4 restore phone-validated full-strip recognition
+
+Owner screenshot 135728.jpg shows zero readable results out of 28 with packed
+fields; prices are read but level tokens are missing/malformed. The engine stays
+IDLE and never prepares a tap. The experimental atlas and its four geometry tests
+were removed. They validated geometry but could not validate native MLKit.
+
+Restored the exact bitmap extraction block and token coordinate mapping from
+v0.4.1, checked against that tag. The native upgrade strip spans reference
+1130–1265 at unchanged resolution. Timing measurement and per-purchase histories
+are retained, along with strict level parsing, all freshness/currency/foreground
+guards, receipt deduplication, single-flight OCR and active preview suspension.
+No malformed level is repaired and no action deadline is extended.
+
+Ran `tools/cloud-gradle.sh -PsplitApks assembleDebug testDebugUnitTest lintDebug
+ktlintCheck`: all passed. 130 tests executed, zero failures/errors/skips; four
+atlas-only tests were intentionally removed with the unused implementation.
+The restored input has prior phone evidence from 0.4.1, but the combined 0.4.4
+build still needs native regression validation. No speedup or native OCR accuracy
+for this new APK is claimed.
+
+Signature, unchanged certificate, version code 11 and 16 KiB ZIP alignment
+verified. ZIP and standalone APK bytes match. APK SHA-256: `4cdc488c14687ed857dbe4d2f53da3ba3334f9c541ad147355861f264c93b2a9`.

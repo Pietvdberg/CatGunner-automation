@@ -55,3 +55,19 @@ Source SHA-256: `1883a7a684087c8c4a7bb606b95ce43c800a27462bf8b4bc7746d8a714ba458
 
 0.4.2 reduces OCR input and preview-copy work and records timing, but its native
 OCR accuracy, end-to-end latency and active sampling battery cost remain untested.
+
+## 0.4.3 packed OCR regression (135728.jpg)
+
+The owner reports no action. The screenshot shows Readable=0/28, a 522 ms frame
+age and 508 ms OCR work time; costs parse but Power level is `Lvs278` and Speed
+and Money level strings are empty. No dispatch check was performed and the
+single-purchase engine remains IDLE. Returning to AutoPilot stopped the waiting
+run at 0/5. That foreground stop explains the final status, but the unreadable
+levels prevented arming beforehand. No purchase timing row exists for an unarmed
+request. The exact internal MLKit failure is unknown; geometry-only tests could
+not establish recognition accuracy of the repacked fields.
+
+0.4.4 removes packed fields and restores the full-strip input and token mapping
+used by the completed 0.4.1 run. All per-purchase timing and purchase guards remain.
+The restored combination needs a phone regression check; no new accuracy/speed
+result is claimed. Source SHA-256: `f956dba194ff229de26ec0eb9d650bf5e1ae72731dad5c1fb9e76f4cb3c89f68`.

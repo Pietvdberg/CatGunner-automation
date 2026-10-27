@@ -7,7 +7,7 @@ import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
 
-/** One bounded in-flight field atlas. The bundled recognizer operates without network access. */
+/** Offline, single-flight OCR of the native strip from the phone-validated 0.4.1 build. */
 class UpgradeOcr : AutoCloseable {
     private val recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
     private var busy = false
@@ -21,11 +21,17 @@ class UpgradeOcr : AutoCloseable {
         if (busy || closed) return false
         busy = true
         val startedAt = SystemClock.elapsedRealtime()
-        val layout = OcrFieldLayout(pixels.width, pixels.height)
+        val frameWidth = pixels.width
+        val frameHeight = pixels.height
+        val top = (1130L * frameHeight / 1280).toInt()
+        val bottom = (1265L * pixels.height / 1280).toInt()
+        val colors = IntArray(pixels.width * (bottom - top)) { index ->
+            (0xFF shl 24) or pixels.rgbAt(index % pixels.width, top + index / pixels.width)
+        }
         val bitmap = Bitmap.createBitmap(
-            layout.colors(pixels),
-            layout.width,
-            layout.height,
+            colors,
+            pixels.width,
+            bottom - top,
             Bitmap.Config.ARGB_8888
         )
         try {
@@ -36,12 +42,10 @@ class UpgradeOcr : AutoCloseable {
                             val tokens = task.result.textBlocks.flatMap { it.lines }
                                 .flatMap { it.elements }.mapNotNull { element ->
                                     val bounds = element.boundingBox ?: return@mapNotNull null
-                                    layout.token(
+                                    UpgradeOcrToken(
                                         element.text,
-                                        bounds.left,
-                                        bounds.top,
-                                        bounds.right,
-                                        bounds.bottom
+                                        bounds.exactCenterX() * 570 / frameWidth,
+                                        (top + bounds.exactCenterY()) * 1280 / frameHeight
                                     )
                                 }
                             UpgradeOcrParser.parse(tokens, evidence)

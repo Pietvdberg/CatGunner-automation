@@ -12,8 +12,10 @@ gesture. The final guard and `dispatchGesture` call execute under the controller
 same synchronization lock as pause/stop. A dispatched gesture may still finish.
 
 `PurchasePipeline` performs lightweight label/color matching before bundled OCR
-of six packed native-resolution level/price fields. Tokens must fit wholly inside
-one field and map back to the original strict parser coordinates. OCR levels and costs must parse strictly; suffix magnitudes
+of the full native upgrade strip (reference y=1130–1265), using the token mapping
+from the phone-validated 0.4.1 baseline. The six-field packing experiment from
+0.4.2/0.4.3 was removed after native level recognition regressed. OCR levels and
+costs must parse strictly; suffix magnitudes
 are not guessed. Only the current foreground game can update calibration previews
 or purchase evidence. One bounded OCR task runs at a time. Raw frames are closed;
 one scaled preview is retained in memory for calibration, never used for action safety.

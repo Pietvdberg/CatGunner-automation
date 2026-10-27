@@ -1,18 +1,19 @@
 # CatGunner AutoPilot
 
 Private, on-device Android assistant for Idle Cat Gunner (`com.Chodun.CatGunner`).
-Version 0.4.3 adds per-purchase timing and streamlines OCR for **bounded automatic purchasing**. The owner has
+Version 0.4.4 restores the phone-validated OCR strip layout and retains per-purchase
+timing for **bounded automatic purchasing**. The owner has
 validated a complete five-purchase run on 0.4.1. Each run has a 1/3/5-purchase cap, with one verified action
 at a time. Expected-gain optimization and Rebirth Rush remain future milestones. Green banknotes
 are the only permitted currency; gems, unknown currencies and real money are forbidden.
 
 ## Download on your phone or computer
 
-- **[Download Pixel 10 APK (17.2 MB)](https://github.com/Pietvdberg/CatGunner-automation/raw/refs/tags/v0.4.3/downloads/AutoPilot-Pixel10-0.4.3.apk)**
-- **[Download ZIP with APK and USB-install instructions (9.5 MB)](https://github.com/Pietvdberg/CatGunner-automation/raw/refs/tags/v0.4.3/downloads/AutoPilot-Pixel10-download.zip)**
+- **[Download Pixel 10 APK (17.2 MB)](https://github.com/Pietvdberg/CatGunner-automation/raw/refs/tags/v0.4.4/downloads/AutoPilot-Pixel10-0.4.4.apk)**
+- **[Download ZIP with APK and USB-install instructions (9.5 MB)](https://github.com/Pietvdberg/CatGunner-automation/raw/refs/tags/v0.4.4/downloads/AutoPilot-Pixel10-download.zip)**
 - [View installation instructions](downloads/INSTALL.txt) and [SHA-256 checksums](downloads/SHA256SUMS).
 
-These are signed 0.4.3 builds. Hosting on GitHub fixes
+These are signed 0.4.4 builds. Hosting on GitHub fixes
 file access; it does not remove Play Protect's installation block. A work computer
 can download the files without installing software. USB/ADB installation requires
 a computer on which you are allowed to run Android Platform-Tools.
@@ -187,7 +188,7 @@ message. A separate outcome notification alerts only after a run completes or
 stops, so you can keep the game visible while it is active. Android notification
 settings and Do Not Disturb can silence alerts.
 
-## 0.4.2 recognition performance
+## 0.4.2 recognition experiment (removed in 0.4.4)
 
 OCR receives six isolated level/price fields at native resolution instead of the
 entire upgrade strip. On a 1080×2424 frame the OCR bitmap is 606×196 (118,776
@@ -228,3 +229,17 @@ Use the per-row timings to compare later purchases with earlier ones. There is n
 established cause of progressive slowdown yet. Repeated same-event receipts are
 now filtered before journal reads; timing-only updates do not trigger capture
 notification refreshes. No per-frame disk logging or unbounded history was added.
+
+## 0.4.4 restores the working OCR input
+
+Owner evidence from 0.4.3 shows zero readable results out of 28: the packed OCR
+fields read prices but missed or misread levels, so no purchase was armed.
+The six-field optimization is removed. OCR again receives the unchanged native
+upgrade strip (reference y=1130–1265), with the same token-to-screen mapping used
+by the completed 5/5 run on 0.4.1. Strict parsing remains unchanged; malformed
+levels are never reconstructed. Per-purchase timing, receipt deduplication,
+preview-copy suspension and single-flight recognition remain enabled. This update
+needs a phone regression check; cloud tests cannot validate native MLKit accuracy.
+Install over the current app; calibration remains saved. A run that cannot arm
+any purchase has no numbered purchase records; its latest OCR diagnostics still
+show the readability failure.
