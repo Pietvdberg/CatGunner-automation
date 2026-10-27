@@ -162,3 +162,27 @@ retains foreground-event status, and adds terminal-run outcome notifications.
 Notification/device behavior and the new deferral path still need phone validation.
 
 APK SHA-256: `0f75e74f06485bdbe3712c7c2c3168a89f363746230e819be76e200ec42c2dcf`.
+
+## 0.4.2 focused OCR and active capture cadence
+
+Ran `tools/cloud-gradle.sh -PsplitApks assembleDebug testDebugUnitTest lintDebug
+ktlintCheck`: all passed. 127 tests executed with zero failures/errors/skips.
+Four new tests verify native field pixels/coordinates at three resolutions,
+reject padding/spanning tokens, map all six fields to the existing strict parser,
+and bound the Pixel 10 atlas to less than half the previous input pixel count.
+The example corpus atlas was visually inspected for complete level/price glyphs.
+Native MLKit inference was not available in the cloud; recognition accuracy and
+end-to-end speedup still require phone validation. No timeouts, financial guards,
+verification requirements or actual gesture retry rules were relaxed.
+
+The owner supplied a completed 5/5 run on 0.4.1 and reported slow operation;
+see phone-validation.md. 0.4.2 records OCR work time/readability counters and
+complete-run duration including game opening. It copies no preview while active,
+uses six native text crops (118,776 atlas pixels versus 276,480 full strip pixels)
+and polls fresh frames at up to 10 Hz while active, 4 Hz otherwise. OCR remains
+single-flight without a task/frame queue. Increased active sampling needs battery
+validation; a pixel-count reduction is not a measured latency improvement.
+
+The APK signature, unchanged signing certificate, version code 9, native ARM64
+packaging and 16 KiB ZIP alignment were verified. The ZIP's embedded APK matches
+the standalone bytes. APK SHA-256: `101cdbe97a741438363ab425b9cfa6a78a05671f5f9e0a85f458f923a4dfdcaf`.

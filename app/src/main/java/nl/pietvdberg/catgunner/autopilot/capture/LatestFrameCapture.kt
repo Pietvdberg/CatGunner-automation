@@ -10,7 +10,7 @@ import android.os.SystemClock
 import nl.pietvdberg.catgunner.autopilot.vision.PixelSource
 import nl.pietvdberg.catgunner.autopilot.vision.RgbaPixelSource
 
-/** Samples borrowed pixels at most four times per second; never retains or saves frames. */
+/** Samples at 4 Hz idle or 10 Hz while purchasing; never retains or saves frames. */
 class LatestFrameCapture(
     projection: MediaProjection,
     width: Int,
@@ -18,6 +18,7 @@ class LatestFrameCapture(
     densityDpi: Int,
     handler: Handler,
     shouldAnalyze: () -> Boolean,
+    fastSampling: () -> Boolean,
     analyze: (PixelSource, Long) -> Unit,
     onFailure: () -> Unit
 ) : AutoCloseable {
@@ -31,7 +32,8 @@ class LatestFrameCapture(
                 try {
                     source.acquireLatestImage()?.use { image ->
                         val now = SystemClock.elapsedRealtime()
-                        if (shouldAnalyze() && now - lastSampleAt >= SAMPLE_INTERVAL_MS) {
+                        val interval = if (fastSampling()) 100L else SAMPLE_INTERVAL_MS
+                        if (shouldAnalyze() && now - lastSampleAt >= interval) {
                             lastSampleAt = now
                             val capturedAt = FrameFreshness.capturedAtMillis(
                                 image.timestamp,

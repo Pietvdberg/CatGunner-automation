@@ -3,8 +3,8 @@
 `MainActivity` obtains fresh MediaProjection consent and starts the nonsticky
 `CaptureService` from a visible user action. The projection callback is registered
 before creating the virtual display. Capture dimensions changing ends the session.
-`LatestFrameCapture` acquires only the latest image and samples at most four times
-per second. Borrowed RGBA pixels respect row stride, crop offsets and buffer position.
+`LatestFrameCapture` acquires only the latest image and samples at up to 4 Hz
+while observing or 10 Hz while purchasing. Borrowed RGBA pixels respect row stride, crop offsets and buffer position.
 
 `SessionController` provides immutable StateFlow snapshots. Generation and action
 epoch leases prevent stale results or pause/resume races from reviving a pending
@@ -12,10 +12,12 @@ gesture. The final guard and `dispatchGesture` call execute under the controller
 same synchronization lock as pause/stop. A dispatched gesture may still finish.
 
 `PurchasePipeline` performs lightweight label/color matching before bundled OCR
-of the upgrade strip. OCR levels and costs must parse strictly; suffix magnitudes
+of six packed native-resolution level/price fields. Tokens must fit wholly inside
+one field and map back to the original strict parser coordinates. OCR levels and costs must parse strictly; suffix magnitudes
 are not guessed. Only the current foreground game can update calibration previews
 or purchase evidence. One bounded OCR task runs at a time. Raw frames are closed;
 one scaled preview is retained in memory for calibration, never used for action safety.
+Preview copying is suspended while a purchase/run is active.
 
 `SinglePurchaseEngine` has IDLE, ARMED, DISPATCHED (request pending), VERIFYING,
 VERIFIED, FAILED and CANCELLED states. Arming consumes an explicit user command;

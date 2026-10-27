@@ -1,4 +1,4 @@
-CatGunner AutoPilot 0.4.1 — Pixel 10 / Android 16
+CatGunner AutoPilot 0.4.2 — Pixel 10 / Android 16
 
 The APK is signed with the same development certificate as previous versions.
 It includes offline OCR. It does not disable or bypass Play Protect.
@@ -6,7 +6,7 @@ It includes offline OCR. It does not disable or bypass Play Protect.
 Ubuntu update (using the Platform-Tools folder from the previous installation):
   cd ~/Downloads
   ./platform-tools/adb devices
-  ./platform-tools/adb install -r ~/Downloads/AutoPilot-Pixel10-0.4.1.apk
+  ./platform-tools/adb install -r ~/Downloads/AutoPilot-Pixel10-0.4.2.apk
 
 Connect the unlocked phone over USB with USB debugging enabled; accept the
 phone's debugging prompt. Keep Play Protect enabled. If ADB reports an error,
@@ -31,7 +31,8 @@ NEW: Bounded automatic run
 - Rotation does not compare prices. No expected-DPS or rebirth optimizer exists yet.
 
 The owner validated single purchases for all three controls with VERIFIED 2/2.
-The new bounded-run layer is cloud tested and still requires phone validation.
+The owner validated a complete 5/5 run on 0.4.1; the new focused OCR path
+still needs phone validation.
 Green banknotes only; gems, unknown currency and real money remain forbidden.
 Use Copy test diagnostics if a run stops unexpectedly; no data uploads automatically.
 
@@ -43,3 +44,11 @@ Keep the game visible until the new Automatic run complete/stopped alert instead
 of returning after a fixed 30 seconds. Alerts require allowed notifications and
 may be silenced by Android settings or Do Not Disturb. Opening AutoPilot or its
 notification shade mid-run still stops foreground-only operation.
+
+0.4.2 changes: only six level/price fields go to OCR, at their native resolution.
+Full calibration-preview copying pauses while purchasing. Frame checks run up to
+10 Hz while purchasing (4 Hz otherwise); only one OCR task can run at a time.
+All purchase guards and two-sample verification remain. Completion shows total
+run seconds including game opening. Copy diagnostics includes OCR work time and
+readable sample counts. No measured phone speedup is claimed yet. Try the same
+five-purchase rule to compare; keep the game visible until the outcome alert.

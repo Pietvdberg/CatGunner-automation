@@ -35,6 +35,7 @@ class AutoPurchaseRunner(private val engine: SinglePurchaseEngine, private val c
     private var deadline = 0L
     private var notBefore = 0L
     private var sawGame = false
+    private var startedAt = 0L
 
     @Synchronized
     fun start(
@@ -61,8 +62,9 @@ class AutoPurchaseRunner(private val engine: SinglePurchaseEngine, private val c
         ownedRequest = null
         nextIndex = 0
         sawGame = false
-        notBefore = clock()
-        deadline = clock() + 30_000
+        startedAt = clock()
+        notBefore = startedAt
+        deadline = startedAt + 30_000
         mutableReport.value = AutoRunReport(
             UUID.randomUUID().toString(),
             AutoRunPhase.WAITING,
@@ -138,7 +140,8 @@ class AutoPurchaseRunner(private val engine: SinglePurchaseEngine, private val c
                     verified = count,
                     phase = if (complete) AutoRunPhase.COMPLETE else AutoRunPhase.WAITING,
                     detail = if (complete) {
-                        "Run complete: $count/${report.value.limit} purchases verified."
+                        "Run complete: $count/${report.value.limit} purchases verified in " +
+                            "${(clock() - startedAt) / 1000.0} s (including game opening)."
                     } else {
                         "$count/${report.value.limit} verified. Waiting for the next fresh reading."
                     }

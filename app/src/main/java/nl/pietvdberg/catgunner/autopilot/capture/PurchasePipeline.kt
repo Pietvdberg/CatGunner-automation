@@ -44,6 +44,8 @@ class PurchasePipeline(private val context: Context) : AutoCloseable {
     private val engine = PurchaseRuntime.engine
     private var lastRecognizedAt = -1L
     private var closed = false
+    private var ocrSamples = 0L
+    private var readableSamples = 0L
     private var latestBanknoteMatches: Map<UpgradeKind, Boolean> = emptyMap()
 
     fun sample(pixels: PixelSource, generation: Long, capturedAt: Long) {
@@ -68,7 +70,7 @@ class PurchasePipeline(private val context: Context) : AutoCloseable {
         }
         lastRecognizedAt = capturedAt
         val version = CalibrationStore.gameVersion(context)
-        PreviewStore.update(pixels, evidence, version)
+        if (!PurchaseRuntime.purchasing()) PreviewStore.update(pixels, evidence, version)
         val actionLease = controller.observationLease() ?: return
         val nativeWidth = pixels.width
         val nativeHeight = pixels.height
@@ -77,7 +79,11 @@ class PurchasePipeline(private val context: Context) : AutoCloseable {
         latestBanknoteMatches = banknoteMatches
         ocr.sample(pixels, evidence) { result ->
             val ageMillis = SystemClock.elapsedRealtime() - capturedAt
-            LiveDiagnostics.ocr("Result age (ms): $ageMillis. ${result.detail}")
+            ocrSamples++
+            if (result.upgrades != null) readableSamples++
+            LiveDiagnostics.ocr(
+                "Result age (ms): $ageMillis. Readable=$readableSamples/$ocrSamples. ${result.detail}"
+            )
             val upgrades = result.upgrades
             if (closed ||
                 controller.observationLease() != actionLease ||

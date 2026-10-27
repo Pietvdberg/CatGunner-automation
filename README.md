@@ -1,18 +1,18 @@
 # CatGunner AutoPilot
 
 Private, on-device Android assistant for Idle Cat Gunner (`com.Chodun.CatGunner`).
-Version 0.4.1 adds **bounded automatic purchasing** on top of the phone-validated
-single-purchase engine. Each run has a 1/3/5-purchase cap, with one verified action
+Version 0.4.2 streamlines OCR for **bounded automatic purchasing**. The owner has
+validated a complete five-purchase run on 0.4.1. Each run has a 1/3/5-purchase cap, with one verified action
 at a time. Expected-gain optimization and Rebirth Rush remain future milestones. Green banknotes
 are the only permitted currency; gems, unknown currencies and real money are forbidden.
 
 ## Download on your phone or computer
 
-- **[Download Pixel 10 APK (17.2 MB)](https://github.com/Pietvdberg/CatGunner-automation/raw/refs/tags/v0.4.1/downloads/AutoPilot-Pixel10-0.4.1.apk)**
-- **[Download ZIP with APK and USB-install instructions (9.5 MB)](https://github.com/Pietvdberg/CatGunner-automation/raw/refs/tags/v0.4.1/downloads/AutoPilot-Pixel10-download.zip)**
+- **[Download Pixel 10 APK (17.2 MB)](https://github.com/Pietvdberg/CatGunner-automation/raw/refs/tags/v0.4.2/downloads/AutoPilot-Pixel10-0.4.2.apk)**
+- **[Download ZIP with APK and USB-install instructions (9.5 MB)](https://github.com/Pietvdberg/CatGunner-automation/raw/refs/tags/v0.4.2/downloads/AutoPilot-Pixel10-download.zip)**
 - [View installation instructions](downloads/INSTALL.txt) and [SHA-256 checksums](downloads/SHA256SUMS).
 
-These are signed 0.4.1 builds. Hosting on GitHub fixes
+These are signed 0.4.2 builds. Hosting on GitHub fixes
 file access; it does not remove Play Protect's installation block. A work computer
 can download the files without installing software. USB/ADB installation requires
 a computer on which you are allowed to run Android Platform-Tools.
@@ -186,3 +186,18 @@ separately. Foreground stops retain the observed status instead of only a generi
 message. A separate outcome notification alerts only after a run completes or
 stops, so you can keep the game visible while it is active. Android notification
 settings and Do Not Disturb can silence alerts.
+
+## 0.4.2 recognition performance
+
+OCR receives six isolated level/price fields at native resolution instead of the
+entire upgrade strip. On a 1080×2424 frame the OCR bitmap is 606×196 (118,776
+pixels), versus 1080×256 (276,480 pixels). This reduces input size; it is not a
+measured latency improvement. Currency icons and labels are still checked on the
+original captured frame. The parser and all purchase guards remain unchanged.
+Full calibration previews are not copied during pending purchases or runs.
+Capture samples at up to 10 Hz while purchasing and 4 Hz otherwise; OCR still has
+only one task in flight and no frame queue. Two observations before and after each
+tap remain required. Diagnostics show recognition duration and readable sample
+counts, and completion reports include total run seconds including game opening.
+Native recognition accuracy, latency and battery impact of this update need phone
+validation. Green banknotes only; no actual gesture retries.

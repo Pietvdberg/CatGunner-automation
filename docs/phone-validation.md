@@ -42,3 +42,16 @@ recognition, suffix scales, expected upgrade benefit or strategy optimality.
 0.4.1 adds explicit final-gate reasons and pre-send deferral for transient stale
 frames/layouts, plus outcome notifications to avoid interrupting a run to inspect
 it. It still needs phone validation; a completed cap-sized run is not yet proven.
+
+## Owner confirmation of a complete 0.4.1 run
+
+135726.jpg shows Auto COMPLETE, verified 5/5 under Lowest comparable displayed
+price, and the final single purchase VERIFIED 2/2 (Speed 277→278). The owner says
+it works but takes too long. The screenshot's recording timer is not a run timer;
+no exact batch duration or latency distribution is established. A later OCR
+failure in the historical diagnostics does not undo the completed verified run.
+
+Source SHA-256: `1883a7a684087c8c4a7bb606b95ce43c800a27462bf8b4bc7746d8a714ba4585`.
+
+0.4.2 reduces OCR input and preview-copy work and records timing, but its native
+OCR accuracy, end-to-end latency and active sampling battery cost remain untested.

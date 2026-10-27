@@ -240,6 +240,7 @@ class CaptureService : Service() {
                 metrics.densityDpi,
                 handler,
                 shouldAnalyze = { controller.state.value.mode == SessionMode.OBSERVING },
+                fastSampling = { PurchaseRuntime.purchasing() },
                 analyze = { pixels, capturedAt ->
                     pipeline?.sample(pixels, generation, capturedAt)
                 },

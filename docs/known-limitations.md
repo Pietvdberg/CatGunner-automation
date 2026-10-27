@@ -44,3 +44,10 @@ gap and diagnostic ambiguity without relaxing the 750 ms pre-action limit or
 retrying actual gestures. These changes are cloud validated only. The exact
 original final-gate failure is not established by the supplied screenshots;
 new diagnostics expose it if it persists.
+
+The owner subsequently confirmed a complete 5/5 lowest-comparable-price run on
+0.4.1 (135726.jpg), while reporting slow operation. 0.4.2 uses six native text
+crops, skips preview copying during purchases and samples active frames faster.
+Its cloud-tested geometry does not establish native MLKit accuracy or speed.
+Run duration and OCR work time are now displayed for phone comparison. The
+higher active sampling rate needs battery/thermal validation; idle remains 4 Hz.
