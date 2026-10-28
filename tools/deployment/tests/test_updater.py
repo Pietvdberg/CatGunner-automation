@@ -1,4 +1,5 @@
 """Deployment policy tests: no device or network access."""
+import argparse
 import importlib.util
 import json
 from pathlib import Path
@@ -63,6 +64,49 @@ class UpdaterTest(unittest.TestCase):
         self.assertEqual(u.connect({'device_serial': 'PHONE123'}), 'phone')
         adb.assert_any_call('connect', '192.168.1.82:4567', timeout=8)
         self.assertEqual(adb.call_count, 2)
+
+    def enrollment(self, selectors, identities, selected=None):
+        self.patch('reconnect')
+        self.patch('devices', return_value=selectors)
+        self.patch('shell', side_effect=identities)
+        return argparse.Namespace(serial=selected, endpoint=None)
+
+    def test_enroll_duplicate_aliases_of_one_phone(self):
+        args = self.enrollment(['192.168.1.82:36141', 'adb-phone._adb-tls-connect._tcp'],
+                               ['PHONE123', 'PHONE123'])
+        u.enroll(args)
+        config = json.loads((self.state / 'config.json').read_text())
+        self.assertEqual(config, {'device_serial': 'PHONE123', 'endpoint': '192.168.1.82:36141'})
+
+    def test_enroll_refuses_multiple_physical_phones_without_overwriting_config(self):
+        args = self.enrollment(['phone1', 'phone2'], ['PHONE123', 'PHONE456'])
+        before = (self.state / 'config.json').read_text()
+        with self.assertRaisesRegex(RuntimeError, 'Multiple physical devices'):
+            u.enroll(args)
+        self.assertEqual((self.state / 'config.json').read_text(), before)
+
+    def test_enroll_explicit_alias_with_other_phone_connected(self):
+        args = self.enrollment(['phone1', 'phone2'], ['PHONE456'], selected='phone2')
+        u.enroll(args)
+        self.assertEqual(json.loads((self.state / 'config.json').read_text()),
+                         {'device_serial': 'PHONE456'})
+
+    def test_enroll_no_connection_explains_reconnect(self):
+        args = self.enrollment([], [])
+        with self.assertRaisesRegex(RuntimeError, 'adb connect'):
+            u.enroll(args)
+
+    def test_enroll_unreadable_identity_refuses(self):
+        args = self.enrollment(['phone1'], [''])
+        with self.assertRaisesRegex(RuntimeError, 'stable device identity'):
+            u.enroll(args)
+
+    def test_device_listing_tolerates_trailing_spaces_and_ignores_unauthorized(self):
+        self.patch('adb', return_value='List of devices attached\n'
+                   '192.168.1.82:36141\tdevice  \n'
+                   'adb-phone._adb-tls-connect._tcp device\n'
+                   'offline-phone offline\nunauthorized-phone unauthorized\n')
+        self.assertEqual(u.devices(), ['192.168.1.82:36141', 'adb-phone._adb-tls-connect._tcp'])
 
     def test_active_capture_blocks_install(self):
         self.patch('shell', return_value='ACTIVITY MANAGER SERVICES\nServiceRecord{CaptureService}')

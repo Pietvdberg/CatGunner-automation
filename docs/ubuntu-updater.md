@@ -9,13 +9,15 @@ workspace cannot connect to your home LAN, so the one-time installer runs there.
 
 First finish `adb connect PHONE_IP:CONNECTION_PORT` using the **main** Wireless
 debugging screen, and confirm `adb devices` lists the phone as `device`. Pairing
-alone is not a connection. Leave only that phone connected during enrollment.
+alone is not a connection. Enrollment groups IP and discovery aliases by hardware identity. If multiple
+physical phones are connected, explicitly select yours using `enroll --serial`
+as shown below.
 
 Download the small worker bundle, extract it, and run its installer:
 
 ```bash
 mkdir -p ~/catgunner-updater
-curl -fL --retry 3 https://raw.githubusercontent.com/Pietvdberg/CatGunner-automation/refs/tags/deployment-v1/downloads/ubuntu-updater-1.0.tar.gz -o ~/catgunner-updater/worker.tar.gz
+curl -fL --retry 3 https://raw.githubusercontent.com/Pietvdberg/CatGunner-automation/refs/tags/deployment-v1.0.1/downloads/ubuntu-updater-1.0.1.tar.gz -o ~/catgunner-updater/worker.tar.gz
 tar -xzf ~/catgunner-updater/worker.tar.gz -C ~/catgunner-updater
 bash ~/catgunner-updater/install-ubuntu.sh
 ```
@@ -108,7 +110,12 @@ expires/revokes, pair again using `adb pair` under this same Ubuntu user. No tim
 can supply Android's new pairing code automatically. Do not expose ADB or SSH on
 the public internet. For remote private access use a VPN.
 
-If installer enrollment fails, connect the phone with ADB and rerun the installer.
+Version 1.0.1 fixes enrollment when ADB exposes the same phone under both its
+IP address and mDNS discovery name. Download/extract the new bundle over the old
+setup directory and rerun the installer. Packages already installed are reused.
+
+If enrollment says there is no authorized connection, run `adb devices`, connect
+the phone using the current connection port, and rerun the installer.
 If installation fails, the worker logs the error and tries on the next interval;
 it does not silently mark the version installed. If the timer fails, check
 `systemctl --user status catgunner-updater.service`. The service needs a normal

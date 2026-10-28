@@ -62,8 +62,8 @@ def endpoint(value):
 
 
 def devices():
-    return [line.split()[0] for line in adb('devices').splitlines()
-            if re.fullmatch(r'\S+\s+device', line)]
+    return [fields[0] for line in adb('devices').splitlines()
+            if len(fields := line.split()) >= 2 and fields[1] == 'device']
 
 
 def reconnect(config):
@@ -107,15 +107,33 @@ def enroll(args):
     candidates = devices()
     if args.serial:
         candidates = [device for device in candidates if device == args.serial]
-    if len(candidates) != 1:
-        raise RuntimeError('Connect one phone with adb first, or select it with enroll --serial ADB_SERIAL')
-    device = candidates[0]
-    serial = shell(device, 'getprop', 'ro.serialno').strip()
-    if not re.fullmatch(r'[A-Za-z0-9._-]{4,128}', serial):
-        raise RuntimeError('Cannot read a stable device identity; not enrolling')
+    if not candidates:
+        raise RuntimeError('No authorized phone connection found. Run adb connect with the current '
+                           'Wireless debugging connection port, check adb devices, then rerun enrollment.')
+    identities = {}
+    for device in candidates:
+        serial = shell(device, 'getprop', 'ro.serialno').strip()
+        if not re.fullmatch(r'[A-Za-z0-9._-]{4,128}', serial):
+            raise RuntimeError('Cannot read a stable device identity; not enrolling')
+        identities.setdefault(serial, []).append(device)
+    if len(identities) != 1:
+        raise RuntimeError('Multiple physical devices are connected. Select your phone using '
+                           'enroll --serial ADB_SERIAL from adb devices. Connections: '
+                           + ', '.join(candidates))
+    serial, aliases = next(iter(identities.items()))
     config = {'device_serial': serial}
     if args.endpoint:
         config['endpoint'] = endpoint(args.endpoint)
+    else:
+        # Remember a direct IP as a fallback when discovery is temporarily unavailable.
+        for alias in aliases:
+            try:
+                config['endpoint'] = endpoint(alias)
+                break
+            except ValueError:
+                continue
+    if len(aliases) > 1:
+        LOG.info('Recognized %s ADB connections as one physical phone', len(aliases))
     atomic_json(STATE / 'config.json', config)
     LOG.info('Phone enrolled. Existing Ubuntu ADB keys are retained; no keys are copied.')
 

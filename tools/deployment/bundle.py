@@ -25,7 +25,7 @@ compressed_stream = io.BytesIO()
 with gzip.GzipFile(filename='', fileobj=compressed_stream, mode='wb', mtime=0) as zipped:
     zipped.write(stream.getvalue())
 compressed = compressed_stream.getvalue()
-target = root / 'downloads/ubuntu-updater-1.0.tar.gz'
+target = root / 'downloads/ubuntu-updater-1.0.1.tar.gz'
 if args.check:
     if target.read_bytes() != compressed:
         raise SystemExit('Installer bundle is stale. Run python3 tools/deployment/bundle.py')
