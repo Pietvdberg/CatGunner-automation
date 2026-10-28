@@ -12,6 +12,7 @@ are the only permitted currency; gems, unknown currencies and real money are for
 - **[Download Pixel 10 APK (17.2 MB)](https://github.com/Pietvdberg/CatGunner-automation/raw/refs/tags/v0.4.7/downloads/AutoPilot-Pixel10-0.4.7.apk)**
 - **[Download ZIP with APK and USB-install instructions (9.5 MB)](https://github.com/Pietvdberg/CatGunner-automation/raw/refs/tags/v0.4.7/downloads/AutoPilot-Pixel10-download.zip)**
 - [View installation instructions](downloads/INSTALL.txt) and [SHA-256 checksums](downloads/SHA256SUMS).
+- [Automatic Ubuntu APK updates over wireless ADB](docs/ubuntu-updater.md): one-time setup from Termux, then a five-minute timer downloads, verifies and installs published updates when capture is stopped.
 
 These are signed 0.4.7 builds. Hosting on GitHub fixes
 file access; it does not remove Play Protect's installation block. A work computer

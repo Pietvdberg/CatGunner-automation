@@ -8,3 +8,6 @@ local.properties
 *.keystore
 captures/
 dist/
+
+__pycache__/
+*.pyc

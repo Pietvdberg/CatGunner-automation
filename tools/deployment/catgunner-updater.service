@@ -1,0 +1,17 @@
+[Unit]
+Description=Verify and install published CatGunner AutoPilot updates
+After=network-online.target
+
+[Service]
+Type=oneshot
+Environment=XDG_STATE_HOME=%h/.local/state
+Environment=ADB_MDNS_OPENSCREEN=1
+ExecStart=/usr/bin/python3 "%h/.local/share/catgunner-updater/updater.py" check
+TimeoutStartSec=5min
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=%h/.local/state/catgunner-updater %h/.android
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6 AF_NETLINK

@@ -1,0 +1,8 @@
+{
+  "schema": 1,
+  "package": "nl.pietvdberg.catgunner.autopilot",
+  "version": "0.4.7",
+  "version_code": 14,
+  "version_name": "0.4.7-ocr-worker",
+  "sha256": "048db40d28eb88ee28309e9ae93295199f7dd5b066cf67b7b7d331754919981a"
+}
